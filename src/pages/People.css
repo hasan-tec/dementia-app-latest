@@ -1,0 +1,361 @@
+/* People Page */
+.people-page {
+    max-width: 1100px;
+}
+
+/* Actions Bar */
+.actions-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.search-box {
+    position: relative;
+    flex: 1;
+    max-width: 360px;
+}
+
+.search-icon {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.9rem;
+    opacity: 0.4;
+}
+
+.search-input {
+    width: 100%;
+    padding: 12px 16px 12px 44px;
+    font-size: 0.95rem;
+    color: #1d1d1f;
+    background: white;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 12px;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.search-input::placeholder {
+    color: #a1a1a6;
+}
+
+.search-input:focus {
+    border-color: #0071e3;
+    box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.1);
+}
+
+/* People Grid */
+.people-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 20px;
+}
+
+.person-card {
+    position: relative;
+    overflow: hidden;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    transition: all 0.3s ease;
+}
+
+.person-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
+}
+
+.person-card-link {
+    display: block;
+    text-decoration: none;
+    padding: 28px 20px;
+}
+
+.person-photo {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #f5f5f7;
+    margin: 0 auto 16px;
+    display: block;
+    border: 3px solid rgba(0, 0, 0, 0.04);
+    transition: all 0.2s ease;
+}
+
+.person-card:hover .person-photo {
+    border-color: #0071e3;
+}
+
+.person-info {
+    text-align: center;
+}
+
+.person-name {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #1d1d1f;
+    margin-bottom: 4px;
+}
+
+.person-relation {
+    font-size: 0.85rem;
+    color: #86868b;
+}
+
+.person-actions {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 16px;
+    border-top: 1px solid rgba(0, 0, 0, 0.04);
+    background: #fafafa;
+}
+
+/* Delete Confirmation */
+.delete-confirm {
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.98);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 16px;
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.delete-confirm p {
+    font-weight: 500;
+    color: #1d1d1f;
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+.delete-actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* Photo Upload */
+.photo-upload {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+/* Face Detection Status */
+.face-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    animation: fadeIn 0.3s ease;
+}
+
+.face-status.extracting {
+    background: rgba(251, 191, 36, 0.1);
+    color: #b45309;
+}
+
+.face-status.found {
+    background: rgba(34, 197, 94, 0.1);
+    color: #15803d;
+}
+
+.face-status.not_found {
+    background: rgba(239, 68, 68, 0.1);
+    color: #dc2626;
+}
+
+.face-status .status-icon {
+    font-size: 0.9rem;
+}
+
+.photo-preview {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: #f5f5f7;
+    border: 2px dashed rgba(0, 0, 0, 0.15);
+    cursor: pointer;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.photo-preview:hover {
+    border-color: #0071e3;
+    background: rgba(0, 113, 227, 0.05);
+}
+
+.photo-preview.has-photo {
+    border-style: solid;
+    border-color: transparent;
+}
+
+.photo-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.photo-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    color: #86868b;
+}
+
+.photo-icon {
+    font-size: 1.5rem;
+    opacity: 0.5;
+}
+
+.photo-text {
+    font-size: 0.75rem;
+    text-align: center;
+    padding: 0 8px;
+}
+
+/* Empty State */
+.people-page .empty-state {
+    margin-top: 48px;
+    background: white;
+    border-radius: 24px;
+    padding: 60px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.empty-state-icon {
+    font-size: 3.5rem;
+    margin-bottom: 16px;
+    opacity: 0.3;
+}
+
+.empty-state-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1d1d1f;
+    margin-bottom: 8px;
+}
+
+.empty-state-description {
+    color: #86868b;
+    max-width: 320px;
+    margin-bottom: 24px;
+}
+
+/* Modal */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    animation: fadeIn 0.2s ease;
+}
+
+.modal {
+    background: white;
+    padding: 32px;
+    border-radius: 24px;
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.15);
+    max-width: 440px;
+    width: 90%;
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+}
+
+.modal-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1d1d1f;
+}
+
+.modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 28px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+/* Form Groups */
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.input-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #1d1d1f;
+}
+
+.input {
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 0.95rem;
+    color: #1d1d1f;
+    background: #f5f5f7;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.input:focus {
+    background: white;
+    border-color: #0071e3;
+    box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.1);
+}
+
+.input::placeholder {
+    color: #a1a1a6;
+}
