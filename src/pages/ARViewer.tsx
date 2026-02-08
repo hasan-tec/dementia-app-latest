@@ -16,11 +16,8 @@ interface StoredPersonWithDescriptor {
 export function ARViewer() {
     const videoRef = useRef<HTMLVideoElement>(null);
     const [detectedPerson, setDetectedPerson] = useState<DetectedPerson | null>(null);
-    const [allPeople, setAllPeople] = useState<Person[]>([]);
-    const [storedDescriptors, setStoredDescriptors] = useState<StoredPersonWithDescriptor[]>([]);
     const [cameraActive, setCameraActive] = useState(false);
     const [isRayBanMode, setIsRayBanMode] = useState(false);
-    const [modelsReady, setModelsReady] = useState(false);
     const [isTracking, setIsTracking] = useState(false);
     const [recognitionStatus, setRecognitionStatus] = useState('Loading AI...');
 
@@ -55,7 +52,8 @@ export function ARViewer() {
         const people = await getAllPeople();
         if (!isMounted.current) return;
 
-        setAllPeople(people);
+        if (!isMounted.current) return;
+
         allPeopleRef.current = people;
         console.log('All people loaded from DB:', people);
 
@@ -67,8 +65,8 @@ export function ARViewer() {
                 descriptors.push({ id: person.id, descriptor: person.faceDescriptor });
             }
         }
-        setStoredDescriptors(descriptors);
         storedDescriptorsRef.current = descriptors;
+
         console.log(`Loaded ${descriptors.length} face descriptors for recognition`);
 
         // Load face detection/recognition models
@@ -79,7 +77,8 @@ export function ARViewer() {
             const loaded = await loadFaceDetectionModels();
             if (!isMounted.current) return;
 
-            setModelsReady(loaded);
+            if (!isMounted.current) return;
+
             modelsReadyRef.current = loaded;
             setRecognitionStatus(loaded ? 'Scanning...' : 'AI failed to load');
 
