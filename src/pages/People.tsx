@@ -1,7 +1,8 @@
 import { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { getAllPeople, addPerson, deletePerson, type Person } from '../db/database';
-import { extractFaceDescriptor, loadFaceDetectionModels } from '../services/faceDetection';
+import { EnrollmentController, type EnrollmentState } from '../features/people/enrollment';
+import { tourEvents } from '../features/onboarding/events';
 import './People.css';
 
 export function People() {
@@ -13,17 +14,31 @@ export function People() {
         name: '',
         relation: ''
     });
-    const [photoFile, setPhotoFile] = useState<File | null>(null);
-    const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-    const [faceDescriptor, setFaceDescriptor] = useState<number[] | null>(null);
-    const [faceStatus, setFaceStatus] = useState<'none' | 'extracting' | 'found' | 'not_found'>('none');
+    const [enrollmentState, setEnrollmentState] = useState<EnrollmentState>({
+        step: 'idle',
+        generation: 0,
+        imageBlob: null,
+        previewUrl: null,
+        descriptor: null,
+        descriptorModel: null,
+        errorMessage: null,
+        allowManualSaveWithoutFace: false,
+    });
     const [saving, setSaving] = useState(false);
     const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const photoImgRef = useRef<HTMLImageElement>(null);
+    const enrollmentControllerRef = useRef<EnrollmentController | null>(null);
 
     useEffect(() => {
         loadPeople();
+        const controller = new EnrollmentController((state) => {
+            setEnrollmentState(state);
+        });
+        enrollmentControllerRef.current = controller;
+
+        return () => {
+            controller.destroy();
+        };
     }, []);
 
     async function loadPeople() {
@@ -39,59 +54,38 @@ export function People() {
 
     async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
         const file = e.target.files?.[0];
-        if (file) {
-            setPhotoFile(file);
-            setFaceDescriptor(null);
-            setFaceStatus('none');
-
-            const reader = new FileReader();
-            reader.onloadend = async () => {
-                const dataUrl = reader.result as string;
-                setPhotoPreview(dataUrl);
-
-                // Extract face descriptor from the image
-                setFaceStatus('extracting');
-
-                try {
-                    // Load models first if needed
-                    await loadFaceDetectionModels();
-
-                    // Create image element for face extraction
-                    const img = new Image();
-                    img.crossOrigin = 'anonymous';
-                    img.onload = async () => {
-                        const descriptor = await extractFaceDescriptor(img);
-
-                        if (descriptor) {
-                            setFaceDescriptor(descriptor);
-                            setFaceStatus('found');
-                            console.log('Face descriptor extracted successfully');
-                        } else {
-                            setFaceStatus('not_found');
-                            console.warn('No face found in image');
-                        }
-                    };
-                    img.src = dataUrl;
-                } catch (error) {
-                    console.error('Error extracting face:', error);
-                    setFaceStatus('not_found');
-                }
-            };
-            reader.readAsDataURL(file);
+        if (file && enrollmentControllerRef.current) {
+            enrollmentControllerRef.current.handleFileSelected(file);
         }
     }
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        if (!formData.name || !formData.relation || !photoFile) return;
+        if (!formData.name || !formData.relation || !enrollmentState.imageBlob) return;
+
+        // Block normal save if inference is in-flight or if multiple faces detected
+        if (
+            enrollmentState.step === 'processing_image' ||
+            enrollmentState.step === 'extracting_face' ||
+            enrollmentState.step === 'error_multiple_faces'
+        ) {
+            return;
+        }
 
         setSaving(true);
         try {
-            // Pass face descriptor to addPerson (may be null if face not detected)
-            await addPerson(formData.name, formData.relation, photoFile, faceDescriptor ?? undefined);
+            const newId = await addPerson(
+                formData.name,
+                formData.relation,
+                enrollmentState.imageBlob,
+                enrollmentState.descriptor ?? undefined
+            );
             await loadPeople();
             resetForm();
             setShowModal(false);
+
+            // Notify onboarding tour
+            tourEvents.emit('person:save-success', { id: newId, name: formData.name });
         } catch (error) {
             console.error('Error adding person:', error);
         } finally {
@@ -111,19 +105,27 @@ export function People() {
 
     function resetForm() {
         setFormData({ name: '', relation: '' });
-        setPhotoFile(null);
-        setPhotoPreview(null);
-        setFaceDescriptor(null);
-        setFaceStatus('none');
+        enrollmentControllerRef.current?.reset();
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
     }
 
-    const filteredPeople = people.filter(person =>
-        person.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        person.relation.toLowerCase().includes(searchQuery.toLowerCase())
+    const filteredPeople = people.filter(p =>
+        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.relation.toLowerCase().includes(searchQuery.toLowerCase())
     );
+
+    const isSaveDisabled =
+        saving ||
+        !formData.name ||
+        !formData.relation ||
+        !enrollmentState.imageBlob ||
+        enrollmentState.step === 'processing_image' ||
+        enrollmentState.step === 'extracting_face' ||
+        enrollmentState.step === 'error_multiple_faces' ||
+        (enrollmentState.step === 'error_zero_faces' && !enrollmentState.allowManualSaveWithoutFace) ||
+        (enrollmentState.step === 'error_decode_failed');
 
     if (loading) {
         return (
@@ -139,72 +141,83 @@ export function People() {
             <header className="page-header">
                 <div>
                     <h1 className="page-title">People</h1>
-                    <p className="page-subtitle">Manage registered people for face recognition</p>
+                    <p className="page-subtitle">Manage registered faces and their details</p>
                 </div>
+                <button className="btn btn-primary" onClick={() => setShowModal(true)} data-tour="people-add">
+                    + Add Person
+                </button>
             </header>
 
-            {/* Actions Bar */}
-            <div className="actions-bar">
-                <div className="search-box">
-                    <span className="search-icon">🔍</span>
-                    <input
-                        type="text"
-                        className="search-input"
-                        placeholder="Search by name or relation..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                </div>
-                <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-                    <span>➕</span> Add Person
-                </button>
+            {/* Search Bar */}
+            <div className="search-bar">
+                <span className="search-icon">🔍</span>
+                <input
+                    type="text"
+                    className="search-input"
+                    placeholder="Search by name or relation..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                {searchQuery && (
+                    <button className="search-clear" onClick={() => setSearchQuery('')}>✕</button>
+                )}
             </div>
 
             {/* People Grid */}
             {filteredPeople.length > 0 ? (
                 <div className="people-grid">
                     {filteredPeople.map((person) => (
-                        <div key={person.id} className="person-card glass-card">
-                            <Link to={`/people/${person.id}`} className="person-card-link">
-                                <img
-                                    src={person.photoUrl}
-                                    alt={person.name}
-                                    className="person-photo"
-                                />
+                        <div key={person.id} className="person-card">
+                            <Link to={`/person/${person.id}`} className="person-card-content" data-tour="person-view">
+                                <div className="person-avatar">
+                                    {person.photoUrl ? (
+                                        <img src={person.photoUrl} alt={person.name} />
+                                    ) : (
+                                        <div className="person-avatar-placeholder">
+                                            {person.name.charAt(0)}
+                                        </div>
+                                    )}
+                                    {person.faceDescriptor && (
+                                        <span className="face-badge" title="Face recognition enabled">✓</span>
+                                    )}
+                                </div>
                                 <div className="person-info">
                                     <h3 className="person-name">{person.name}</h3>
-                                    <span className="person-relation">{person.relation}</span>
+                                    <p className="person-relation">{person.relation}</p>
                                 </div>
                             </Link>
-                            <div className="person-actions">
-                                <Link to={`/people/${person.id}`} className="btn btn-ghost btn-sm">
-                                    View
-                                </Link>
-                                <button
-                                    className="btn btn-ghost btn-sm"
-                                    onClick={() => setDeleteConfirm(person.id!)}
-                                >
-                                    🗑️
-                                </button>
-                            </div>
 
-                            {/* Delete Confirmation */}
+                            <button
+                                className="delete-btn"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setDeleteConfirm(person.id!);
+                                }}
+                                title="Delete person"
+                            >
+                                🗑️
+                            </button>
+
+                            {/* Delete Confirmation Modal */}
                             {deleteConfirm === person.id && (
-                                <div className="delete-confirm">
-                                    <p>Delete {person.name}?</p>
-                                    <div className="delete-actions">
-                                        <button
-                                            className="btn btn-danger btn-sm"
-                                            onClick={() => handleDelete(person.id!)}
-                                        >
-                                            Delete
-                                        </button>
-                                        <button
-                                            className="btn btn-ghost btn-sm"
-                                            onClick={() => setDeleteConfirm(null)}
-                                        >
-                                            Cancel
-                                        </button>
+                                <div className="delete-confirm-overlay" onClick={() => setDeleteConfirm(null)}>
+                                    <div className="delete-confirm-modal" onClick={(e) => e.stopPropagation()}>
+                                        <h4>Delete {person.name}?</h4>
+                                        <p>This will also delete all conversation history with this person.</p>
+                                        <div className="delete-confirm-actions">
+                                            <button
+                                                className="btn btn-danger btn-sm"
+                                                onClick={() => handleDelete(person.id!)}
+                                            >
+                                                Delete
+                                            </button>
+                                            <button
+                                                className="btn btn-ghost btn-sm"
+                                                onClick={() => setDeleteConfirm(null)}
+                                            >
+                                                Cancel
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             )}
@@ -238,7 +251,10 @@ export function People() {
                             <h2 className="modal-title">Add New Person</h2>
                             <button
                                 className="btn btn-ghost btn-icon"
-                                onClick={() => setShowModal(false)}
+                                onClick={() => {
+                                    resetForm();
+                                    setShowModal(false);
+                                }}
                             >
                                 ✕
                             </button>
@@ -248,11 +264,12 @@ export function People() {
                             {/* Photo Upload */}
                             <div className="photo-upload">
                                 <div
-                                    className={`photo-preview ${photoPreview ? 'has-photo' : ''}`}
+                                    className={`photo-preview ${enrollmentState.previewUrl ? 'has-photo' : ''}`}
                                     onClick={() => fileInputRef.current?.click()}
+                                    data-tour="person-photo"
                                 >
-                                    {photoPreview ? (
-                                        <img ref={photoImgRef} src={photoPreview} alt="Preview" />
+                                    {enrollmentState.previewUrl ? (
+                                        <img src={enrollmentState.previewUrl} alt="Preview" />
                                     ) : (
                                         <div className="photo-placeholder">
                                             <span className="photo-icon">📷</span>
@@ -262,24 +279,40 @@ export function People() {
                                 </div>
 
                                 {/* Face Detection Status */}
-                                {faceStatus !== 'none' && (
-                                    <div className={`face-status ${faceStatus}`}>
-                                        {faceStatus === 'extracting' && (
+                                {enrollmentState.step !== 'idle' && (
+                                    <div className={`face-status ${enrollmentState.step}`}>
+                                        {(enrollmentState.step === 'processing_image' || enrollmentState.step === 'extracting_face') && (
                                             <>
                                                 <div className="spinner" style={{ width: 14, height: 14 }}></div>
-                                                <span>Detecting face...</span>
+                                                <span>
+                                                    {enrollmentState.step === 'processing_image'
+                                                        ? 'Resizing & preparing photo...'
+                                                        : 'Detecting face & extracting embedding...'}
+                                                </span>
                                             </>
                                         )}
-                                        {faceStatus === 'found' && (
+                                        {enrollmentState.step === 'ready' && (
                                             <>
                                                 <span className="status-icon">✅</span>
-                                                <span>Face detected! Ready for recognition.</span>
+                                                <span>Face detected and verified! Ready for AR recognition.</span>
                                             </>
                                         )}
-                                        {faceStatus === 'not_found' && (
+                                        {enrollmentState.step === 'error_zero_faces' && (
                                             <>
                                                 <span className="status-icon">⚠️</span>
-                                                <span>No face detected. Try a clearer photo.</span>
+                                                <span>No face detected. You may save photo without recognition or try another photo.</span>
+                                            </>
+                                        )}
+                                        {enrollmentState.step === 'error_multiple_faces' && (
+                                            <>
+                                                <span className="status-icon">🚫</span>
+                                                <span>Multiple faces detected. Please upload a photo with only one person.</span>
+                                            </>
+                                        )}
+                                        {(enrollmentState.step === 'error_model_failed' || enrollmentState.step === 'error_decode_failed') && (
+                                            <>
+                                                <span className="status-icon">❌</span>
+                                                <span>{enrollmentState.errorMessage || 'Photo processing error.'}</span>
                                             </>
                                         )}
                                     </div>
@@ -304,6 +337,7 @@ export function People() {
                                     value={formData.name}
                                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                     required
+                                    data-tour="person-name"
                                 />
                             </div>
 
@@ -317,6 +351,7 @@ export function People() {
                                     value={formData.relation}
                                     onChange={(e) => setFormData({ ...formData, relation: e.target.value })}
                                     required
+                                    data-tour="person-relation"
                                 />
                             </div>
 
@@ -334,7 +369,8 @@ export function People() {
                                 <button
                                     type="submit"
                                     className="btn btn-primary"
-                                    disabled={saving || !formData.name || !formData.relation || !photoFile}
+                                    disabled={isSaveDisabled}
+                                    data-tour="person-save"
                                 >
                                     {saving ? (
                                         <>
@@ -342,7 +378,9 @@ export function People() {
                                             Saving...
                                         </>
                                     ) : (
-                                        'Add Person'
+                                        enrollmentState.step === 'error_zero_faces'
+                                            ? 'Save Without Face Data'
+                                            : 'Add Person'
                                     )}
                                 </button>
                             </div>

@@ -23,19 +23,23 @@ export function Dashboard() {
     useEffect(() => {
         async function loadData() {
             try {
-                const [statsData, peopleData, aiStatus] = await Promise.all([
+                // Load local dashboard stats and people immediately without blocking on remote AI
+                const [statsData, peopleData] = await Promise.all([
                     getStats(),
-                    getAllPeople(),
-                    checkGeminiConnection()
+                    getAllPeople()
                 ]);
                 setStats(statsData);
                 setPeople(peopleData);
-                setAiConnected(aiStatus);
             } catch (error) {
                 console.error('Error loading dashboard data:', error);
             } finally {
                 setLoading(false);
             }
+
+            // Non-blocking check for AI connectivity
+            checkGeminiConnection()
+                .then(setAiConnected)
+                .catch(() => setAiConnected(false));
         }
         loadData();
     }, []);
