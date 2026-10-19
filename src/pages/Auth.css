@@ -114,6 +114,38 @@
   background: #ffffff;
 }
 
+/* Password field with eye toggle */
+.auth-password-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.auth-input-password {
+  padding-right: 48px;
+}
+
+.auth-password-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary);
+  border-radius: var(--radius-sm, 6px);
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+.auth-password-toggle:hover {
+  color: var(--color-text-primary);
+  background: rgba(0, 0, 0, 0.05);
+}
+
 .auth-error-banner {
   padding: 12px 16px;
   background: rgba(255, 59, 48, 0.1);
