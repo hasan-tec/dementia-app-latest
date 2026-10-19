@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@supabase/supabase-js": "^2.118.0",
     "@vladmandic/face-api": "^1.7.15",
     "dexie": "^4.3.0",
     "react": "^19.2.0",

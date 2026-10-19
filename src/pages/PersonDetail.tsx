@@ -9,6 +9,7 @@ import {
     type Person,
     type Conversation
 } from '../db/database';
+import { tourEvents } from '../features/onboarding/events';
 import { summarizeConversation } from '../services/gemini';
 import './PersonDetail.css';
 
@@ -65,11 +66,14 @@ export function PersonDetail() {
             }
 
             // Save conversation
-            await addConversation(person.id, convoText, summary);
+            const convoId = await addConversation(person.id, convoText, summary);
             await loadData();
             setConvoText('');
             setManualSummary('');
             setShowAddConvo(false);
+
+            // Emit tour event
+            tourEvents.emit('conversation:save-success', { id: convoId });
         } catch (error) {
             console.error('Error adding conversation:', error);
         } finally {
@@ -156,6 +160,7 @@ export function PersonDetail() {
                     <button
                         className="btn btn-primary"
                         onClick={() => setShowAddConvo(true)}
+                        data-tour="conversation-add"
                     >
                         <span>➕</span> Add Conversation
                     </button>
@@ -240,6 +245,7 @@ export function PersonDetail() {
                                     onChange={(e) => setConvoText(e.target.value)}
                                     rows={4}
                                     required
+                                    data-tour="conversation-text"
                                 />
                             </div>
 
@@ -293,6 +299,7 @@ export function PersonDetail() {
                                     type="submit"
                                     className="btn btn-primary"
                                     disabled={saving || !convoText.trim() || (!useAI && !manualSummary.trim())}
+                                    data-tour="conversation-save"
                                 >
                                     {saving ? 'Saving...' : 'Add Conversation'}
                                 </button>
