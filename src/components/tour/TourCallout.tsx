@@ -10,6 +10,7 @@ interface TourCalloutProps {
   onPrev: () => void;
   onSkip: () => void;
   onPause: () => void;
+  onNavigate?: (path: string) => void;
 }
 
 export const TourCallout: React.FC<TourCalloutProps> = ({
@@ -20,6 +21,7 @@ export const TourCallout: React.FC<TourCalloutProps> = ({
   onPrev,
   onSkip,
   onPause,
+  onNavigate,
 }) => {
   const coords = useMemo(() => {
     const calloutWidth = 320;
@@ -66,7 +68,7 @@ export const TourCallout: React.FC<TourCalloutProps> = ({
 
   return (
     <div
-      className="tour-callout"
+      className={`tour-callout ${!targetRect ? 'tour-callout-centered' : ''}`}
       data-placement={coords.placement}
       style={{
         top: coords.top,
@@ -76,7 +78,7 @@ export const TourCallout: React.FC<TourCalloutProps> = ({
       aria-labelledby="tour-step-title"
       aria-describedby="tour-step-desc"
     >
-      <div className="tour-arrow" />
+      {targetRect && <div className="tour-arrow" />}
 
       <div className="tour-callout-header">
         <span className="tour-step-badge">
@@ -98,6 +100,16 @@ export const TourCallout: React.FC<TourCalloutProps> = ({
       <p id="tour-step-desc" className="tour-callout-instruction">
         {step.instruction}
       </p>
+
+      {!targetRect && step.targetPath && onNavigate && (
+        <button
+          className="tour-btn tour-btn-primary"
+          style={{ width: '100%', padding: '8px 12px', fontSize: '0.85rem' }}
+          onClick={() => onNavigate(step.targetPath!)}
+        >
+          Go to {step.targetPath === '/people' ? 'People' : step.targetPath === '/ar' ? 'AR Viewer' : 'Destination'} →
+        </button>
+      )}
 
       <div className="tour-callout-footer">
         <button className="tour-btn tour-btn-ghost" onClick={onSkip}>

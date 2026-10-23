@@ -23,7 +23,7 @@ export function Dashboard() {
     useEffect(() => {
         async function loadData() {
             try {
-                // Load local dashboard stats and people immediately without blocking on remote AI
+                // Load dashboard stats and people immediately without blocking on remote AI
                 const [statsData, peopleData] = await Promise.all([
                     getStats(),
                     getAllPeople()

@@ -40,6 +40,12 @@
   pointer-events: auto;
 }
 
+.tour-callout.tour-callout-centered {
+  transform: translate(-50%, -50%);
+  top: 50% !important;
+  left: 50% !important;
+}
+
 /* Arrow Tip */
 .tour-arrow {
   position: absolute;

@@ -144,19 +144,50 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
     saveState('skipped', currentStepIndex);
   }, [currentStepIndex, saveState]);
 
+  const goToStep = useCallback(
+    (stepIdx: number) => {
+      const targetStep = MAIN_TOUR_STEPS[stepIdx];
+      if (!targetStep) return;
+
+      // Auto-navigate to expected route if current page doesn't match
+      if (targetStep.targetPath && location.pathname !== targetStep.targetPath) {
+        navigate(targetStep.targetPath);
+      } else if (
+        (targetStep.id === 'step-person-photo' ||
+          targetStep.id === 'step-person-name' ||
+          targetStep.id === 'step-person-relation' ||
+          targetStep.id === 'step-person-save' ||
+          targetStep.id === 'step-person-view') &&
+        location.pathname !== '/people'
+      ) {
+        navigate('/people');
+      } else if (
+        (targetStep.id === 'step-ar-status' ||
+          targetStep.id === 'step-ar-camera-toggle' ||
+          targetStep.id === 'step-ar-home') &&
+        location.pathname !== '/ar'
+      ) {
+        navigate('/ar');
+      }
+
+      saveState('active', stepIdx);
+    },
+    [location.pathname, navigate, saveState]
+  );
+
   const nextStep = useCallback(() => {
     if (currentStepIndex < MAIN_TOUR_STEPS.length - 1) {
-      saveState('active', currentStepIndex + 1);
+      goToStep(currentStepIndex + 1);
     } else {
       saveState('completed', currentStepIndex);
     }
-  }, [currentStepIndex, saveState]);
+  }, [currentStepIndex, goToStep, saveState]);
 
   const prevStep = useCallback(() => {
     if (currentStepIndex > 0) {
-      saveState('active', currentStepIndex - 1);
+      goToStep(currentStepIndex - 1);
     }
-  }, [currentStepIndex, saveState]);
+  }, [currentStepIndex, goToStep]);
 
   // 5. Escape key to pause tour
   useEffect(() => {
@@ -188,7 +219,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
     }
   }, [currentStep, nextStep, status]);
 
-  // Auto-advance if navigating to the expected target route for step 1 or 11
+  // Auto-advance if navigating to the expected target route
   useEffect(() => {
     if (status !== 'active') return;
 
@@ -196,6 +227,13 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
       // User clicked nav-people and reached /people!
       setTimeout(nextStep, 150);
     } else if (currentStep?.id === 'step-nav-ar' && location.pathname === '/ar') {
+      setTimeout(nextStep, 150);
+    } else if (
+      currentStep?.id === 'step-person-view' &&
+      (location.pathname.startsWith('/people/') || location.pathname.startsWith('/person/'))
+    ) {
+      setTimeout(nextStep, 150);
+    } else if (currentStep?.id === 'step-ar-home' && location.pathname === '/') {
       setTimeout(nextStep, 150);
     }
   }, [currentStep, location.pathname, nextStep, status]);
@@ -227,6 +265,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
             onPrev={prevStep}
             onSkip={skipTour}
             onPause={pauseTour}
+            onNavigate={(path) => navigate(path)}
           />
         </>
       )}
