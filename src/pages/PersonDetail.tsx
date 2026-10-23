@@ -10,6 +10,7 @@ import {
     type Conversation
 } from '../db/database';
 import { tourEvents } from '../features/onboarding/events';
+import { useTour } from '../components/tour/TourProvider';
 import { summarizeConversation } from '../services/gemini';
 import './PersonDetail.css';
 
@@ -26,6 +27,21 @@ export function PersonDetail() {
     const [saving, setSaving] = useState(false);
     const [summarizing, setSummarizing] = useState(false);
     const [deleteConfirm, setDeleteConfirm] = useState(false);
+    const { currentStep } = useTour();
+
+    // Auto-open conversation modal when tour reaches conversation form steps
+    useEffect(() => {
+        if (!currentStep) return;
+
+        if (
+            currentStep.id === 'step-conversation-text' ||
+            currentStep.id === 'step-conversation-save'
+        ) {
+            setShowAddConvo(true);
+        } else if (currentStep.id === 'step-conversation-add') {
+            setShowAddConvo(false);
+        }
+    }, [currentStep?.id]);
 
     useEffect(() => {
         loadData();
@@ -35,8 +51,8 @@ export function PersonDetail() {
         if (!id) return;
         try {
             const [personData, convosData] = await Promise.all([
-                getPersonById(parseInt(id)),
-                getConversationsForPerson(parseInt(id))
+                getPersonById(id),
+                getConversationsForPerson(id)
             ]);
             setPerson(personData || null);
             setConversations(convosData);
@@ -82,7 +98,7 @@ export function PersonDetail() {
         }
     }
 
-    async function handleDeleteConversation(convoId: number) {
+    async function handleDeleteConversation(convoId: string | number) {
         try {
             await deleteConversation(convoId);
             await loadData();

@@ -6,6 +6,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import type { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { clearLocalCache } from '../db/database';
 
 export type AuthStatus = 'initializing' | 'signedIn' | 'signedOut';
 
@@ -56,6 +57,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setIsRecoveryMode(true);
       } else if (event === 'SIGNED_OUT') {
         setIsRecoveryMode(false);
+        clearLocalCache();
+      } else if (event === 'SIGNED_IN') {
+        clearLocalCache();
       }
     });
 
@@ -71,11 +75,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signUp = useCallback(async (email: string, password: string) => {
+    const baseUrl = (import.meta.env.VITE_APP_URL || window.location.origin).replace(/\/$/, '');
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: `${baseUrl}/auth/callback`,
       },
     });
 
@@ -95,6 +100,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Ignore
     }
 
+    await clearLocalCache();
     const { error } = await supabase.auth.signOut();
     setUser(null);
     setSession(null);
@@ -104,8 +110,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const resetPasswordForEmail = useCallback(async (email: string) => {
+    const baseUrl = (import.meta.env.VITE_APP_URL || window.location.origin).replace(/\/$/, '');
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: `${baseUrl}/reset-password`,
     });
     return { error };
   }, []);

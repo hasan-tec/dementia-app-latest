@@ -40,6 +40,7 @@ export const MAIN_TOUR_STEPS: TourStep[] = [
     title: 'Select a Face Photo',
     instruction: 'Upload a clear, front-facing photo containing exactly one person in good lighting.',
     placement: 'top',
+    targetPath: '/people',
   },
   {
     id: 'step-person-name',
@@ -48,6 +49,7 @@ export const MAIN_TOUR_STEPS: TourStep[] = [
     title: 'Enter Name',
     instruction: 'Type the person\'s name (e.g., "Sarah").',
     placement: 'top',
+    targetPath: '/people',
   },
   {
     id: 'step-person-relation',
@@ -56,6 +58,7 @@ export const MAIN_TOUR_STEPS: TourStep[] = [
     title: 'Define Relationship',
     instruction: 'Specify their relationship to the patient (e.g., "Daughter", "Grandson").',
     placement: 'top',
+    targetPath: '/people',
   },
   {
     id: 'step-person-save',
@@ -64,6 +67,7 @@ export const MAIN_TOUR_STEPS: TourStep[] = [
     title: 'Save Enrollment',
     instruction: 'Once the green checkmark confirms face extraction, click "Add Person" to save.',
     placement: 'top',
+    targetPath: '/people',
     autoAdvanceEvent: 'person:save-success',
   },
   {

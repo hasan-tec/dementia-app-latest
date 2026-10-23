@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { TourProvider } from './components/tour/TourProvider';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
@@ -13,6 +13,7 @@ import { Signup } from './pages/Signup';
 import { ForgotPassword } from './pages/ForgotPassword';
 import { ResetPassword } from './pages/ResetPassword';
 import { AuthCallback } from './pages/AuthCallback';
+import { NotFound } from './pages/NotFound';
 import './index.css';
 
 function App() {
@@ -49,11 +50,12 @@ function App() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/people" element={<People />} />
               <Route path="/people/:id" element={<PersonDetail />} />
+              <Route path="/person/:id" element={<PersonDetail />} />
               <Route path="/help" element={<Guide />} />
             </Route>
 
-            {/* Fallback Redirect */}
-            <Route path="*" element={<Navigate to="/" replace />} />
+            {/* 404 Not Found Page */}
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </TourProvider>
       </BrowserRouter>

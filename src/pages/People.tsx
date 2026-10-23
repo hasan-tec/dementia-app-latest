@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { getAllPeople, addPerson, deletePerson, type Person } from '../db/database';
 import { EnrollmentController, type EnrollmentState } from '../features/people/enrollment';
 import { tourEvents } from '../features/onboarding/events';
+import { useTour } from '../components/tour/TourProvider';
 import './People.css';
 
 export function People() {
@@ -25,9 +26,27 @@ export function People() {
         allowManualSaveWithoutFace: false,
     });
     const [saving, setSaving] = useState(false);
-    const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+    const [deleteConfirm, setDeleteConfirm] = useState<string | number | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const enrollmentControllerRef = useRef<EnrollmentController | null>(null);
+    const { currentStep } = useTour();
+
+    // Auto-open modal when tour guides through the add-person form
+    useEffect(() => {
+        if (!currentStep) return;
+
+        const isFormStep =
+            currentStep.id === 'step-person-photo' ||
+            currentStep.id === 'step-person-name' ||
+            currentStep.id === 'step-person-relation' ||
+            currentStep.id === 'step-person-save';
+
+        if (isFormStep) {
+            setShowModal(true);
+        } else if (currentStep.id === 'step-people-add') {
+            setShowModal(false);
+        }
+    }, [currentStep?.id]);
 
     useEffect(() => {
         loadPeople();
@@ -93,7 +112,7 @@ export function People() {
         }
     }
 
-    async function handleDelete(id: number) {
+    async function handleDelete(id: string | number) {
         try {
             await deletePerson(id);
             await loadPeople();
@@ -168,7 +187,7 @@ export function People() {
                 <div className="people-grid">
                     {filteredPeople.map((person) => (
                         <div key={person.id} className="person-card">
-                            <Link to={`/person/${person.id}`} className="person-card-content" data-tour="person-view">
+                            <Link to={`/people/${person.id}`} className="person-card-content" data-tour="person-view">
                                 <div className="person-avatar">
                                     {person.photoUrl ? (
                                         <img src={person.photoUrl} alt={person.name} />
