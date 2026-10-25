@@ -1,11 +1,27 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 import { Sidebar } from './Sidebar';
+import { useTour } from '../tour/TourProvider';
 import './Layout.css';
 
 export function Layout() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const { status, currentStep } = useTour();
+
+    // Automatically reveal mobile sidebar when tour highlights a sidebar navigation link
+    useEffect(() => {
+        if (status !== 'active' || !currentStep) return;
+        const isMobile = window.innerWidth <= 768;
+        if (!isMobile) return;
+
+        const isSidebarStep = ['step-nav-people', 'step-nav-ar', 'step-nav-help'].includes(currentStep.id);
+        if (isSidebarStep) {
+            setIsMobileMenuOpen(true);
+        } else {
+            setIsMobileMenuOpen(false);
+        }
+    }, [currentStep, status]);
 
     return (
         <div className="app-layout">

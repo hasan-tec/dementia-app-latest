@@ -31,11 +31,11 @@ export function People() {
     const [deleting, setDeleting] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const enrollmentControllerRef = useRef<EnrollmentController | null>(null);
-    const { currentStep } = useTour();
+    const { status, currentStep } = useTour();
 
     // Auto-open modal when tour guides through the add-person form
     useEffect(() => {
-        if (!currentStep) return;
+        if (status !== 'active' || !currentStep) return;
 
         const isFormStep =
             currentStep.id === 'step-person-photo' ||
@@ -45,10 +45,36 @@ export function People() {
 
         if (isFormStep) {
             setShowModal(true);
-        } else if (currentStep.id === 'step-people-add') {
+        } else if (currentStep.id === 'step-people-add' || currentStep.id === 'step-person-view') {
             setShowModal(false);
         }
-    }, [currentStep?.id]);
+    }, [currentStep?.id, status]);
+
+    // Ensure at least one person card is available to showcase in Step 7
+    useEffect(() => {
+        if (status === 'active' && currentStep?.id === 'step-person-view' && !loading && people.length === 0) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 100;
+            canvas.height = 100;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                ctx.fillStyle = '#0071e3';
+                ctx.beginPath();
+                ctx.arc(50, 50, 50, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 44px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('S', 50, 52);
+            }
+            canvas.toBlob((blob) => {
+                if (blob) {
+                    addPerson('Sarah', 'Daughter', blob).then(() => loadPeople());
+                }
+            }, 'image/png');
+        }
+    }, [status, currentStep?.id, loading, people.length]);
 
     useEffect(() => {
         loadPeople();
@@ -169,7 +195,14 @@ export function People() {
                     <h1 className="page-title">People</h1>
                     <p className="page-subtitle">Manage registered faces and their details</p>
                 </div>
-                <button className="btn btn-primary" onClick={() => setShowModal(true)} data-tour="people-add">
+                <button
+                    className="btn btn-primary"
+                    onClick={() => {
+                        setShowModal(true);
+                        tourEvents.emit('modal:open', { modalId: 'add-person' });
+                    }}
+                    data-tour="people-add"
+                >
                     <Plus size={18} />
                     <span>Add Person</span>
                 </button>
@@ -195,7 +228,7 @@ export function People() {
             {/* People Grid */}
             {filteredPeople.length > 0 ? (
                 <div className="people-grid">
-                    {filteredPeople.map((person) => (
+                    {filteredPeople.map((person, index) => (
                         <div key={person.id} className="person-card">
                             <button
                                 type="button"
@@ -211,7 +244,11 @@ export function People() {
                                 <Trash2 size={15} />
                             </button>
 
-                            <Link to={`/people/${person.id}`} className="person-card-content" data-tour="person-view">
+                            <Link
+                                to={`/people/${person.id}`}
+                                className="person-card-content"
+                                data-tour={index === 0 ? 'person-view' : undefined}
+                            >
                                 <div className="person-avatar">
                                     {person.photoUrl ? (
                                         <img src={person.photoUrl} alt={person.name} className="person-avatar-img" />
@@ -255,7 +292,14 @@ export function People() {
 
             {/* Add Person Modal */}
             {showModal && (
-                <div className="modal-overlay" onClick={() => setShowModal(false)}>
+                <div
+                    className="modal-overlay"
+                    onClick={() => {
+                        resetForm();
+                        setShowModal(false);
+                        tourEvents.emit('modal:close', { modalId: 'add-person' });
+                    }}
+                >
                     <div className="modal" onClick={(e) => e.stopPropagation()}>
                         <div className="modal-header">
                             <h2 className="modal-title">Add New Person</h2>
@@ -264,6 +308,7 @@ export function People() {
                                 onClick={() => {
                                     resetForm();
                                     setShowModal(false);
+                                    tourEvents.emit('modal:close', { modalId: 'add-person' });
                                 }}
                                 aria-label="Close modal"
                             >
@@ -373,6 +418,7 @@ export function People() {
                                     onClick={() => {
                                         resetForm();
                                         setShowModal(false);
+                                        tourEvents.emit('modal:close', { modalId: 'add-person' });
                                     }}
                                 >
                                     Cancel

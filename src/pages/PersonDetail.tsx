@@ -26,21 +26,21 @@ export function PersonDetail() {
     const [saving, setSaving] = useState(false);
     const [summarizing, setSummarizing] = useState(false);
     const [deleteConfirm, setDeleteConfirm] = useState(false);
-    const { currentStep } = useTour();
+    const { status, currentStep } = useTour();
 
     // Auto-open conversation modal when tour reaches conversation form steps
     useEffect(() => {
-        if (!currentStep) return;
+        if (status !== 'active' || !currentStep) return;
 
         if (
             currentStep.id === 'step-conversation-text' ||
             currentStep.id === 'step-conversation-save'
         ) {
             setShowAddConvo(true);
-        } else if (currentStep.id === 'step-conversation-add') {
+        } else if (currentStep.id === 'step-conversation-add' || currentStep.id === 'step-nav-ar') {
             setShowAddConvo(false);
         }
-    }, [currentStep?.id]);
+    }, [currentStep?.id, status]);
 
     useEffect(() => {
         loadData();
@@ -184,7 +184,10 @@ export function PersonDetail() {
                     <h2 className="section-title">Conversations</h2>
                     <button
                         className="btn btn-primary"
-                        onClick={() => setShowAddConvo(true)}
+                        onClick={() => {
+                            setShowAddConvo(true);
+                            tourEvents.emit('modal:open', { modalId: 'add-conversation' });
+                        }}
                         data-tour="conversation-add"
                     >
                         <span>➕</span> Add Conversation
@@ -234,7 +237,10 @@ export function PersonDetail() {
                         <p>No conversations logged yet</p>
                         <button
                             className="btn btn-primary"
-                            onClick={() => setShowAddConvo(true)}
+                            onClick={() => {
+                                setShowAddConvo(true);
+                                tourEvents.emit('modal:open', { modalId: 'add-conversation' });
+                            }}
                         >
                             Add First Conversation
                         </button>
@@ -244,13 +250,24 @@ export function PersonDetail() {
 
             {/* Add Conversation Modal */}
             {showAddConvo && (
-                <div className="modal-overlay" onClick={() => setShowAddConvo(false)}>
+                <div
+                    className="modal-overlay"
+                    onClick={() => {
+                        setConvoText('');
+                        setShowAddConvo(false);
+                        tourEvents.emit('modal:close', { modalId: 'add-conversation' });
+                    }}
+                >
                     <div className="modal" onClick={(e) => e.stopPropagation()}>
                         <div className="modal-header">
                             <h2 className="modal-title">Add Conversation</h2>
                             <button
                                 className="btn btn-ghost btn-icon"
-                                onClick={() => setShowAddConvo(false)}
+                                onClick={() => {
+                                    setConvoText('');
+                                    setShowAddConvo(false);
+                                    tourEvents.emit('modal:close', { modalId: 'add-conversation' });
+                                }}
                             >
                                 ✕
                             </button>
@@ -303,6 +320,7 @@ export function PersonDetail() {
                                     onClick={() => {
                                         setConvoText('');
                                         setShowAddConvo(false);
+                                        tourEvents.emit('modal:close', { modalId: 'add-conversation' });
                                     }}
                                 >
                                     Cancel

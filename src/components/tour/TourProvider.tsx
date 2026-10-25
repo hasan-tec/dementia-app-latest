@@ -1,7 +1,7 @@
 /**
  * Tour Provider & Context
- * Manages active step targeting, DOM measurements, event-driven step progression,
- * and user progress persistence.
+ * Manages active step targeting, DOM measurements, interactive step progression,
+ * cross-route navigation, modal coordination, and user progress persistence.
  */
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
@@ -9,6 +9,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { MAIN_TOUR_STEPS, type TourStep } from '../../features/onboarding/steps';
 import { tourEvents } from '../../features/onboarding/events';
 import { loadUserTourProgress, saveUserTourProgress, type TourStatus } from '../../features/onboarding/progress';
+import { getAllPeople, addPerson } from '../../db/database';
 import { useAuth } from '../../context/AuthContext';
 import { TourCallout } from './TourCallout';
 import { TourSpotlight } from './TourSpotlight';
@@ -23,9 +24,46 @@ export interface TourContextType {
   skipTour: () => void;
   nextStep: () => void;
   prevStep: () => void;
+  goToStep: (stepIdx: number) => void;
 }
 
 const TourContext = createContext<TourContextType | undefined>(undefined);
+
+/**
+ * Ensures a valid registered person exists so steps 7-10 never stall.
+ */
+async function getOrCreateTourPersonId(): Promise<string | number> {
+  try {
+    const people = await getAllPeople();
+    if (people && people.length > 0 && people[0].id) {
+      return people[0].id;
+    }
+
+    // Generate a default demo person
+    const canvas = document.createElement('canvas');
+    canvas.width = 100;
+    canvas.height = 100;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.fillStyle = '#0071e3';
+      ctx.beginPath();
+      ctx.arc(50, 50, 50, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 44px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('S', 50, 52);
+    }
+    const blob = await new Promise<Blob>((resolve) =>
+      canvas.toBlob((b) => resolve(b || new Blob()), 'image/png')
+    );
+    return await addPerson('Sarah', 'Daughter', blob);
+  } catch (err) {
+    console.error('Error ensuring tour person exists:', err);
+    return '1';
+  }
+}
 
 export function TourProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -48,7 +86,6 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
 
     loadUserTourProgress(user.id).then((progress) => {
       if (progress.status === 'idle') {
-        // Automatically offer or start tour for new accounts
         setStatus('active');
         setCurrentStepIndex(0);
       } else {
@@ -71,10 +108,12 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
 
     if (element) {
       const rect = element.getBoundingClientRect();
-      setTargetRect(rect);
-    } else {
-      setTargetRect(null);
+      if (rect.width > 0 && rect.height > 0) {
+        setTargetRect(rect);
+        return;
+      }
     }
+    setTargetRect(null);
   }, [currentStep]);
 
   // Check measurements on route change, scroll, resize, or DOM mutations
@@ -90,7 +129,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
     window.addEventListener('resize', handleResizeOrScroll, { passive: true });
     window.addEventListener('scroll', handleResizeOrScroll, { passive: true, capture: true });
 
-    // Polling interval in case target takes time to mount (e.g. modals, async lists)
+    // Periodic check in case target takes time to mount (modals, list rendering)
     const interval = setInterval(updateTargetMeasurements, 250);
 
     return () => {
@@ -99,6 +138,22 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
       clearInterval(interval);
     };
   }, [status, updateTargetMeasurements]);
+
+  // Rapid measurement retries on step change or route transition
+  useEffect(() => {
+    if (status !== 'active') return;
+
+    updateTargetMeasurements();
+    const t1 = setTimeout(updateTargetMeasurements, 60);
+    const t2 = setTimeout(updateTargetMeasurements, 180);
+    const t3 = setTimeout(updateTargetMeasurements, 450);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
+  }, [currentStepIndex, location.pathname, status, updateTargetMeasurements]);
 
   // 3. Scroll target into view if outside viewport
   useEffect(() => {
@@ -145,29 +200,45 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
   }, [currentStepIndex, saveState]);
 
   const goToStep = useCallback(
-    (stepIdx: number) => {
+    async (stepIdx: number) => {
       const targetStep = MAIN_TOUR_STEPS[stepIdx];
       if (!targetStep) return;
 
-      // Auto-navigate to expected route if current page doesn't match
-      if (targetStep.targetPath && location.pathname !== targetStep.targetPath) {
-        navigate(targetStep.targetPath);
+      // Handle precise routing requirements
+      if (targetStep.id === 'step-nav-people') {
+        if (location.pathname !== '/') navigate('/');
       } else if (
-        (targetStep.id === 'step-person-photo' ||
-          targetStep.id === 'step-person-name' ||
-          targetStep.id === 'step-person-relation' ||
-          targetStep.id === 'step-person-save' ||
-          targetStep.id === 'step-person-view') &&
-        location.pathname !== '/people'
+        targetStep.id === 'step-people-add' ||
+        targetStep.id === 'step-person-photo' ||
+        targetStep.id === 'step-person-name' ||
+        targetStep.id === 'step-person-relation' ||
+        targetStep.id === 'step-person-save' ||
+        targetStep.id === 'step-person-view'
       ) {
-        navigate('/people');
+        if (location.pathname !== '/people') {
+          navigate('/people');
+        }
       } else if (
-        (targetStep.id === 'step-ar-status' ||
-          targetStep.id === 'step-ar-camera-toggle' ||
-          targetStep.id === 'step-ar-home') &&
-        location.pathname !== '/ar'
+        targetStep.id === 'step-conversation-add' ||
+        targetStep.id === 'step-conversation-text' ||
+        targetStep.id === 'step-conversation-save'
       ) {
-        navigate('/ar');
+        if (!location.pathname.startsWith('/people/') && !location.pathname.startsWith('/person/')) {
+          const personId = await getOrCreateTourPersonId();
+          navigate(`/people/${personId}`);
+        }
+      } else if (
+        targetStep.id === 'step-ar-status' ||
+        targetStep.id === 'step-ar-camera-toggle' ||
+        targetStep.id === 'step-ar-home'
+      ) {
+        if (location.pathname !== '/ar') {
+          navigate('/ar');
+        }
+      } else if (targetStep.id === 'step-help-replay') {
+        if (location.pathname === '/ar') {
+          navigate('/');
+        }
       }
 
       saveState('active', stepIdx);
@@ -217,14 +288,44 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
       });
       return unsub;
     }
-  }, [currentStep, nextStep, status]);
 
-  // Auto-advance if navigating to the expected target route
+    // Modal open event auto-advance (when user clicks + Add Person or + Add Conversation)
+    const unsubModalOpen = tourEvents.on('modal:open', (data) => {
+      if (currentStep.id === 'step-people-add' && data.modalId === 'add-person') {
+        nextStep();
+      } else if (currentStep.id === 'step-conversation-add' && data.modalId === 'add-conversation') {
+        nextStep();
+      }
+    });
+
+    // Modal close event sync (when user cancels modal, step back gracefully)
+    const unsubModalClose = tourEvents.on('modal:close', (data) => {
+      if (
+        ['step-person-photo', 'step-person-name', 'step-person-relation', 'step-person-save'].includes(currentStep.id) &&
+        data.modalId === 'add-person'
+      ) {
+        const step2Idx = MAIN_TOUR_STEPS.findIndex((s) => s.id === 'step-people-add');
+        if (step2Idx >= 0) goToStep(step2Idx);
+      } else if (
+        ['step-conversation-text', 'step-conversation-save'].includes(currentStep.id) &&
+        data.modalId === 'add-conversation'
+      ) {
+        const step8Idx = MAIN_TOUR_STEPS.findIndex((s) => s.id === 'step-conversation-add');
+        if (step8Idx >= 0) goToStep(step8Idx);
+      }
+    });
+
+    return () => {
+      unsubModalOpen();
+      unsubModalClose();
+    };
+  }, [currentStep, goToStep, nextStep, status]);
+
+  // 7. Auto-advance when user performs navigation directly
   useEffect(() => {
     if (status !== 'active') return;
 
     if (currentStep?.id === 'step-nav-people' && location.pathname === '/people') {
-      // User clicked nav-people and reached /people!
       setTimeout(nextStep, 150);
     } else if (currentStep?.id === 'step-nav-ar' && location.pathname === '/ar') {
       setTimeout(nextStep, 150);
@@ -250,6 +351,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
         skipTour,
         nextStep,
         prevStep,
+        goToStep,
       }}
     >
       {children}
