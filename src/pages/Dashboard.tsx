@@ -1,5 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import {
+    Users,
+    MessageSquare,
+    Bot,
+    Glasses,
+    UserPlus,
+    Rocket,
+    ArrowRight
+} from 'lucide-react';
 import { getStats, getAllPeople, type Person, type Conversation } from '../db/database';
 import { checkGeminiConnection } from '../services/gemini';
 import './Dashboard.css';
@@ -56,14 +65,18 @@ export function Dashboard() {
     return (
         <div className="dashboard">
             <header className="page-header">
-                <h1 className="page-title">Dashboard</h1>
-                <p className="page-subtitle">Overview of your memory assistance system</p>
+                <div className="page-header-text">
+                    <h1 className="page-title">Dashboard</h1>
+                    <p className="page-subtitle">Overview of your memory assistance system</p>
+                </div>
             </header>
 
             {/* Stats Cards */}
             <div className="stats-grid">
                 <div className="stat-card glass-card">
-                    <div className="stat-icon">👥</div>
+                    <div className="stat-icon">
+                        <Users size={28} color="#0071e3" strokeWidth={2.2} />
+                    </div>
                     <div className="stat-content">
                         <span className="stat-value">{stats.totalPeople}</span>
                         <span className="stat-label">People Registered</span>
@@ -71,7 +84,9 @@ export function Dashboard() {
                 </div>
 
                 <div className="stat-card glass-card">
-                    <div className="stat-icon">💬</div>
+                    <div className="stat-icon">
+                        <MessageSquare size={28} color="#34c759" strokeWidth={2.2} />
+                    </div>
                     <div className="stat-content">
                         <span className="stat-value">{stats.totalConversations}</span>
                         <span className="stat-label">Conversations Logged</span>
@@ -79,7 +94,9 @@ export function Dashboard() {
                 </div>
 
                 <div className="stat-card glass-card">
-                    <div className="stat-icon">🤖</div>
+                    <div className="stat-icon">
+                        <Bot size={28} color="#af52de" strokeWidth={2.2} />
+                    </div>
                     <div className="stat-content">
                         <span className={`stat-status ${aiConnected ? 'connected' : 'disconnected'}`}>
                             {aiConnected === null ? 'Checking...' : aiConnected ? 'Connected' : 'Not Configured'}
@@ -89,7 +106,9 @@ export function Dashboard() {
                 </div>
 
                 <div className="stat-card glass-card">
-                    <div className="stat-icon">👓</div>
+                    <div className="stat-icon">
+                        <Glasses size={28} color="#ff9500" strokeWidth={2.2} />
+                    </div>
                     <div className="stat-content">
                         <Link to="/ar" className="stat-link">Launch AR View</Link>
                         <span className="stat-label">AR Viewer</span>
@@ -102,11 +121,15 @@ export function Dashboard() {
                 <h2 className="section-title">Quick Actions</h2>
                 <div className="quick-actions">
                     <Link to="/people" className="action-card glass-card">
-                        <span className="action-icon">➕</span>
+                        <span className="action-icon">
+                            <UserPlus size={20} color="#0071e3" />
+                        </span>
                         <span className="action-text">Add New Person</span>
                     </Link>
                     <Link to="/ar" className="action-card glass-card">
-                        <span className="action-icon">👓</span>
+                        <span className="action-icon">
+                            <Glasses size={20} color="#ff9500" />
+                        </span>
                         <span className="action-text">Open AR Viewer</span>
                     </Link>
                 </div>
@@ -117,7 +140,10 @@ export function Dashboard() {
                 <section className="dashboard-section">
                     <div className="section-header">
                         <h2 className="section-title">Registered People</h2>
-                        <Link to="/people" className="section-link">View All →</Link>
+                        <Link to="/people" className="section-link" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <span>View All</span>
+                            <ArrowRight size={14} />
+                        </Link>
                     </div>
                     <div className="people-preview">
                         {people.slice(0, 4).map((person) => (
@@ -145,7 +171,9 @@ export function Dashboard() {
             {people.length === 0 && (
                 <section className="dashboard-section">
                     <div className="getting-started glass-card">
-                        <div className="getting-started-icon">🚀</div>
+                        <div className="getting-started-icon">
+                            <Rocket size={44} color="#0071e3" strokeWidth={2} />
+                        </div>
                         <h3>Get Started</h3>
                         <p>Add your first person to begin using the memory assistance system.</p>
                         <Link to="/people" className="btn btn-primary btn-lg">

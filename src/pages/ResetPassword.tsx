@@ -5,6 +5,7 @@
 
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { AlertTriangle, Lock, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import './Auth.css';
 
@@ -60,7 +61,7 @@ export function ResetPassword() {
       <div className="auth-container">
         <div className="auth-card">
           <div className="auth-header">
-            <div className="auth-logo">⚠️</div>
+            <div className="auth-logo"><AlertTriangle size={28} color="#ffffff" strokeWidth={2.2} /></div>
             <h1 className="auth-title">Invalid or Expired Link</h1>
             <p className="auth-subtitle">
               This password reset link is invalid or has expired. Please request a new link.
@@ -79,14 +80,14 @@ export function ResetPassword() {
     <div className="auth-container">
       <div className="auth-card">
         <div className="auth-header">
-          <div className="auth-logo">🔐</div>
+          <div className="auth-logo"><Lock size={28} color="#ffffff" strokeWidth={2.2} /></div>
           <h1 className="auth-title">Set New Password</h1>
           <p className="auth-subtitle">Create a secure new password for your account</p>
         </div>
 
         {errorMessage && (
           <div className="auth-error-banner" role="alert">
-            <span>⚠️</span>
+            <span><AlertCircle size={16} /></span>
             <span>{errorMessage}</span>
           </div>
         )}
@@ -94,7 +95,7 @@ export function ResetPassword() {
         {success ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div className="auth-success-banner">
-              <span>✅</span>
+              <span><CheckCircle2 size={16} color="#34c759" /></span>
               <span>Your password has been reset successfully! Redirecting you to the dashboard...</span>
             </div>
             <Link to="/" className="auth-button" style={{ textDecoration: 'none' }}>

@@ -5,6 +5,7 @@
 
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { KeyRound, AlertCircle, CheckCircle2, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import './Auth.css';
 
@@ -40,14 +41,14 @@ export function ForgotPassword() {
     <div className="auth-container">
       <div className="auth-card">
         <div className="auth-header">
-          <div className="auth-logo">🔑</div>
+          <div className="auth-logo"><KeyRound size={28} color="#ffffff" strokeWidth={2.2} /></div>
           <h1 className="auth-title">Reset Password</h1>
           <p className="auth-subtitle">Enter your account email to receive a recovery link</p>
         </div>
 
         {errorMessage && (
           <div className="auth-error-banner" role="alert">
-            <span>⚠️</span>
+            <span><AlertCircle size={16} /></span>
             <span>{errorMessage}</span>
           </div>
         )}
@@ -55,7 +56,7 @@ export function ForgotPassword() {
         {submitted ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div className="auth-success-banner">
-              <span>✅</span>
+              <span><CheckCircle2 size={16} color="#34c759" /></span>
               <span>
                 If an account exists for <strong>{email}</strong>, a recovery link has been sent. Please check your inbox.
               </span>
@@ -97,8 +98,8 @@ export function ForgotPassword() {
             </button>
 
             <div className="auth-footer-links">
-              <Link to="/login" className="auth-link">
-                ← Back to Sign In
+              <Link to="/login" className="auth-link" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                <ArrowLeft size={14} /> Back to Sign In
               </Link>
             </div>
           </form>

@@ -219,21 +219,16 @@ a {
 }
 
 /* Layout Utilities */
-.page-header {
-  margin-bottom: var(--space-6);
-  animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
 .page-title {
-  font-size: 2.5rem;
+  font-size: 2.25rem;
   font-weight: 700;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.025em;
   color: var(--color-text-primary);
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.25rem;
 }
 
 .page-subtitle {
-  font-size: 1.125rem;
+  font-size: 1rem;
   color: var(--color-text-secondary);
   font-weight: 400;
   max-width: 600px;

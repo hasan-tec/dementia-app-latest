@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import { Plus, Search, X, Trash2, Check, User, Camera, Users, CheckCircle2, AlertTriangle, AlertOctagon, XCircle } from 'lucide-react';
 import { getAllPeople, addPerson, deletePerson, type Person } from '../db/database';
 import { EnrollmentController, type EnrollmentState } from '../features/people/enrollment';
 import { tourEvents } from '../features/onboarding/events';
@@ -27,13 +28,14 @@ export function People() {
     });
     const [saving, setSaving] = useState(false);
     const [deleteConfirm, setDeleteConfirm] = useState<string | number | null>(null);
+    const [deleting, setDeleting] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const enrollmentControllerRef = useRef<EnrollmentController | null>(null);
-    const { currentStep } = useTour();
+    const { status, currentStep } = useTour();
 
     // Auto-open modal when tour guides through the add-person form
     useEffect(() => {
-        if (!currentStep) return;
+        if (status !== 'active' || !currentStep) return;
 
         const isFormStep =
             currentStep.id === 'step-person-photo' ||
@@ -43,10 +45,36 @@ export function People() {
 
         if (isFormStep) {
             setShowModal(true);
-        } else if (currentStep.id === 'step-people-add') {
+        } else if (currentStep.id === 'step-people-add' || currentStep.id === 'step-person-view') {
             setShowModal(false);
         }
-    }, [currentStep?.id]);
+    }, [currentStep?.id, status]);
+
+    // Ensure at least one person card is available to showcase in Step 7
+    useEffect(() => {
+        if (status === 'active' && currentStep?.id === 'step-person-view' && !loading && people.length === 0) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 100;
+            canvas.height = 100;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                ctx.fillStyle = '#0071e3';
+                ctx.beginPath();
+                ctx.arc(50, 50, 50, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 44px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('S', 50, 52);
+            }
+            canvas.toBlob((blob) => {
+                if (blob) {
+                    addPerson('Sarah', 'Daughter', blob).then(() => loadPeople());
+                }
+            }, 'image/png');
+        }
+    }, [status, currentStep?.id, loading, people.length]);
 
     useEffect(() => {
         loadPeople();
@@ -113,12 +141,15 @@ export function People() {
     }
 
     async function handleDelete(id: string | number) {
+        setDeleting(true);
         try {
             await deletePerson(id);
             await loadPeople();
             setDeleteConfirm(null);
         } catch (error) {
             console.error('Error deleting person:', error);
+        } finally {
+            setDeleting(false);
         }
     }
 
@@ -134,6 +165,8 @@ export function People() {
         p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.relation.toLowerCase().includes(searchQuery.toLowerCase())
     );
+
+    const personToDelete = people.find(p => p.id === deleteConfirm);
 
     const isSaveDisabled =
         saving ||
@@ -158,18 +191,26 @@ export function People() {
     return (
         <div className="people-page">
             <header className="page-header">
-                <div>
+                <div className="page-header-text">
                     <h1 className="page-title">People</h1>
                     <p className="page-subtitle">Manage registered faces and their details</p>
                 </div>
-                <button className="btn btn-primary" onClick={() => setShowModal(true)} data-tour="people-add">
-                    + Add Person
+                <button
+                    className="btn btn-primary"
+                    onClick={() => {
+                        setShowModal(true);
+                        tourEvents.emit('modal:open', { modalId: 'add-person' });
+                    }}
+                    data-tour="people-add"
+                >
+                    <Plus size={18} />
+                    <span>Add Person</span>
                 </button>
             </header>
 
             {/* Search Bar */}
             <div className="search-bar">
-                <span className="search-icon">🔍</span>
+                <Search size={18} className="search-icon" />
                 <input
                     type="text"
                     className="search-input"
@@ -178,74 +219,63 @@ export function People() {
                     onChange={(e) => setSearchQuery(e.target.value)}
                 />
                 {searchQuery && (
-                    <button className="search-clear" onClick={() => setSearchQuery('')}>✕</button>
+                    <button className="search-clear" onClick={() => setSearchQuery('')} aria-label="Clear search">
+                        <X size={15} />
+                    </button>
                 )}
             </div>
 
             {/* People Grid */}
             {filteredPeople.length > 0 ? (
                 <div className="people-grid">
-                    {filteredPeople.map((person) => (
+                    {filteredPeople.map((person, index) => (
                         <div key={person.id} className="person-card">
-                            <Link to={`/people/${person.id}`} className="person-card-content" data-tour="person-view">
+                            <button
+                                type="button"
+                                className="delete-btn"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setDeleteConfirm(person.id!);
+                                }}
+                                title={`Delete ${person.name}`}
+                                aria-label={`Delete ${person.name}`}
+                            >
+                                <Trash2 size={15} />
+                            </button>
+
+                            <Link
+                                to={`/people/${person.id}`}
+                                className="person-card-content"
+                                data-tour={index === 0 ? 'person-view' : undefined}
+                            >
                                 <div className="person-avatar">
                                     {person.photoUrl ? (
-                                        <img src={person.photoUrl} alt={person.name} />
+                                        <img src={person.photoUrl} alt={person.name} className="person-avatar-img" />
                                     ) : (
                                         <div className="person-avatar-placeholder">
-                                            {person.name.charAt(0)}
+                                            {person.name ? person.name.charAt(0).toUpperCase() : <User size={36} />}
                                         </div>
                                     )}
                                     {person.faceDescriptor && (
-                                        <span className="face-badge" title="Face recognition enabled">✓</span>
+                                        <span className="face-badge" title="Face recognition enabled">
+                                            <Check size={13} strokeWidth={3} />
+                                        </span>
                                     )}
                                 </div>
                                 <div className="person-info">
                                     <h3 className="person-name">{person.name}</h3>
-                                    <p className="person-relation">{person.relation}</p>
+                                    <span className="person-relation">{person.relation}</span>
                                 </div>
                             </Link>
-
-                            <button
-                                className="delete-btn"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    setDeleteConfirm(person.id!);
-                                }}
-                                title="Delete person"
-                            >
-                                🗑️
-                            </button>
-
-                            {/* Delete Confirmation Modal */}
-                            {deleteConfirm === person.id && (
-                                <div className="delete-confirm-overlay" onClick={() => setDeleteConfirm(null)}>
-                                    <div className="delete-confirm-modal" onClick={(e) => e.stopPropagation()}>
-                                        <h4>Delete {person.name}?</h4>
-                                        <p>This will also delete all conversation history with this person.</p>
-                                        <div className="delete-confirm-actions">
-                                            <button
-                                                className="btn btn-danger btn-sm"
-                                                onClick={() => handleDelete(person.id!)}
-                                            >
-                                                Delete
-                                            </button>
-                                            <button
-                                                className="btn btn-ghost btn-sm"
-                                                onClick={() => setDeleteConfirm(null)}
-                                            >
-                                                Cancel
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
                         </div>
                     ))}
                 </div>
             ) : (
                 <div className="empty-state">
-                    <div className="empty-state-icon">👥</div>
+                    <div className="empty-state-icon" style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}>
+                        <Users size={48} color="#86868b" strokeWidth={1.75} />
+                    </div>
                     <h3 className="empty-state-title">
                         {searchQuery ? 'No results found' : 'No people registered yet'}
                     </h3>
@@ -264,7 +294,14 @@ export function People() {
 
             {/* Add Person Modal */}
             {showModal && (
-                <div className="modal-overlay" onClick={() => setShowModal(false)}>
+                <div
+                    className="modal-overlay"
+                    onClick={() => {
+                        resetForm();
+                        setShowModal(false);
+                        tourEvents.emit('modal:close', { modalId: 'add-person' });
+                    }}
+                >
                     <div className="modal" onClick={(e) => e.stopPropagation()}>
                         <div className="modal-header">
                             <h2 className="modal-title">Add New Person</h2>
@@ -273,9 +310,11 @@ export function People() {
                                 onClick={() => {
                                     resetForm();
                                     setShowModal(false);
+                                    tourEvents.emit('modal:close', { modalId: 'add-person' });
                                 }}
+                                aria-label="Close modal"
                             >
-                                ✕
+                                <X size={20} />
                             </button>
                         </div>
 
@@ -291,7 +330,7 @@ export function People() {
                                         <img src={enrollmentState.previewUrl} alt="Preview" />
                                     ) : (
                                         <div className="photo-placeholder">
-                                            <span className="photo-icon">📷</span>
+                                            <Camera size={28} className="photo-icon" />
                                             <span className="photo-text">Click to upload photo</span>
                                         </div>
                                     )}
@@ -312,25 +351,25 @@ export function People() {
                                         )}
                                         {enrollmentState.step === 'ready' && (
                                             <>
-                                                <span className="status-icon">✅</span>
+                                                <CheckCircle2 size={16} color="#34c759" className="status-icon" />
                                                 <span>Face detected and verified! Ready for AR recognition.</span>
                                             </>
                                         )}
                                         {enrollmentState.step === 'error_zero_faces' && (
                                             <>
-                                                <span className="status-icon">⚠️</span>
+                                                <AlertTriangle size={16} color="#ff9500" className="status-icon" />
                                                 <span>No face detected. You may save photo without recognition or try another photo.</span>
                                             </>
                                         )}
                                         {enrollmentState.step === 'error_multiple_faces' && (
                                             <>
-                                                <span className="status-icon">🚫</span>
+                                                <AlertOctagon size={16} color="#ff3b30" className="status-icon" />
                                                 <span>Multiple faces detected. Please upload a photo with only one person.</span>
                                             </>
                                         )}
                                         {(enrollmentState.step === 'error_model_failed' || enrollmentState.step === 'error_decode_failed') && (
                                             <>
-                                                <span className="status-icon">❌</span>
+                                                <XCircle size={16} color="#ff3b30" className="status-icon" />
                                                 <span>{enrollmentState.errorMessage || 'Photo processing error.'}</span>
                                             </>
                                         )}
@@ -381,6 +420,7 @@ export function People() {
                                     onClick={() => {
                                         resetForm();
                                         setShowModal(false);
+                                        tourEvents.emit('modal:close', { modalId: 'add-person' });
                                     }}
                                 >
                                     Cancel
@@ -404,6 +444,46 @@ export function People() {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirmation Modal (Popup) */}
+            {personToDelete && (
+                <div className="modal-overlay" onClick={() => !deleting && setDeleteConfirm(null)}>
+                    <div className="modal delete-modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="delete-modal-icon-wrap">
+                            <Trash2 size={26} />
+                        </div>
+                        <h2 className="delete-modal-title">Delete {personToDelete.name}?</h2>
+                        <p className="delete-modal-desc">
+                            Are you sure you want to delete <strong>{personToDelete.name}</strong>? This will permanently remove their face recognition profile and all associated conversation history.
+                        </p>
+                        <div className="delete-modal-actions">
+                            <button
+                                type="button"
+                                className="btn btn-secondary"
+                                onClick={() => setDeleteConfirm(null)}
+                                disabled={deleting}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                className="btn btn-danger"
+                                onClick={() => handleDelete(personToDelete.id!)}
+                                disabled={deleting}
+                            >
+                                {deleting ? (
+                                    <>
+                                        <div className="spinner" style={{ width: 14, height: 14, borderTopColor: 'white' }}></div>
+                                        <span>Deleting...</span>
+                                    </>
+                                ) : (
+                                    'Delete Person'
+                                )}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

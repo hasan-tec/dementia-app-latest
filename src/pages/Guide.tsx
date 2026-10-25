@@ -5,6 +5,14 @@
  */
 
 import { useNavigate } from 'react-router-dom';
+import {
+  RotateCcw,
+  Sparkles,
+  Camera,
+  FileText,
+  Glasses,
+  Lightbulb
+} from 'lucide-react';
 import { useTour } from '../components/tour/TourProvider';
 import './Dashboard.css';
 
@@ -14,46 +22,55 @@ export function Guide() {
 
   return (
     <div className="dashboard" style={{ maxWidth: '860px', margin: '0 auto' }}>
-      <header className="page-header" style={{ marginBottom: '32px' }}>
-        <div>
+      <header className="page-header">
+        <div className="page-header-text">
           <h1 className="page-title">Help & Guide</h1>
           <p className="page-subtitle">Learn how to configure face recognition and memory anchors</p>
         </div>
         <button
           className="btn btn-primary"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
           onClick={() => {
             startTour();
             navigate('/');
           }}
           data-tour="help-replay"
         >
-          🔄 {status === 'completed' || status === 'skipped' ? 'Replay Interactive Guide' : 'Start Guide'}
+          <RotateCcw size={16} />
+          <span>{status === 'completed' || status === 'skipped' ? 'Replay Interactive Guide' : 'Start Guide'}</span>
         </button>
       </header>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
         {/* Core Concepts Card */}
-        <div className="stats-card" style={{ padding: '28px' }}>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 16px 0', color: '#1d1d1f' }}>
-            🌟 How MemoryAR Works
+        <div className="stat-card glass-card" style={{ padding: '24px' }}>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 16px 0', color: '#1d1d1f', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Sparkles size={20} color="#0071e3" />
+            <span>How MemoryAR Works</span>
           </h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <div style={{ fontSize: '1.5rem' }}>📷</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center' }}>
+                <Camera size={26} color="#0071e3" />
+              </div>
               <strong style={{ fontSize: '0.95rem', color: '#1d1d1f' }}>1. Add Loved Ones</strong>
               <p style={{ fontSize: '0.88rem', color: '#86868b', margin: 0, lineHeight: 1.45 }}>
                 Upload photos of family and caregivers. The system safely extracts a 128-dimensional facial embedding.
               </p>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <div style={{ fontSize: '1.5rem' }}>📝</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center' }}>
+                <FileText size={26} color="#34c759" />
+              </div>
               <strong style={{ fontSize: '0.95rem', color: '#1d1d1f' }}>2. Record Memories</strong>
               <p style={{ fontSize: '0.88rem', color: '#86868b', margin: 0, lineHeight: 1.45 }}>
                 Log conversations and recent topics. An AI memory summary creates a short, comforting reminder.
               </p>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <div style={{ fontSize: '1.5rem' }}>👓</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center' }}>
+                <Glasses size={26} color="#ff9500" />
+              </div>
               <strong style={{ fontSize: '0.95rem', color: '#1d1d1f' }}>3. Real-Time AR</strong>
               <p style={{ fontSize: '0.88rem', color: '#86868b', margin: 0, lineHeight: 1.45 }}>
                 Launch the camera feed. As family members enter view, names, relationships, and conversation anchors appear.
@@ -63,9 +80,10 @@ export function Guide() {
         </div>
 
         {/* Best Practices */}
-        <div className="stats-card" style={{ padding: '28px' }}>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 16px 0', color: '#1d1d1f' }}>
-            💡 Best Practices for Best Recognition
+        <div className="stat-card glass-card" style={{ padding: '24px' }}>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 16px 0', color: '#1d1d1f', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Lightbulb size={20} color="#ff9500" />
+            <span>Best Practices for Best Recognition</span>
           </h2>
           <ul style={{ margin: 0, paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '10px', color: '#48484a', fontSize: '0.9rem', lineHeight: 1.5 }}>
             <li>

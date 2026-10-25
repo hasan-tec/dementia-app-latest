@@ -7,40 +7,59 @@
     flex: 1;
     margin-left: 260px;
     /* match sidebar width */
-    padding: 40px 48px;
+    padding: 0 48px 48px 48px;
     background: #f5f5f7;
     min-height: 100vh;
 }
 
-/* Page Header */
+/* Page Header - Sticky Frosted Header */
 .page-header {
-    margin-bottom: 32px;
-    animation: fadeIn 0.5s ease-out;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(245, 245, 247, 0.88);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.02);
+    padding-top: 24px;
+    padding-bottom: 16px;
+    margin-bottom: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    animation: headerFadeIn 0.35s ease-out;
 }
 
-@keyframes fadeIn {
+@keyframes headerFadeIn {
     from {
         opacity: 0;
-        transform: translateY(10px);
     }
-
     to {
         opacity: 1;
-        transform: translateY(0);
     }
+}
+
+.page-header-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
 
 .page-title {
-    font-size: 2.25rem;
+    font-size: 2.15rem;
     font-weight: 700;
     color: #1d1d1f;
-    letter-spacing: -0.02em;
-    margin-bottom: 8px;
+    letter-spacing: -0.025em;
+    margin: 0;
+    line-height: 1.15;
 }
 
 .page-subtitle {
     color: #86868b;
-    font-size: 1rem;
+    font-size: 0.95rem;
+    margin: 0;
 }
 
 /* Page Actions */
@@ -73,6 +92,15 @@
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
 }
 
+/* Mobile Topbar (Hidden on Desktop) */
+.mobile-topbar {
+    display: none;
+}
+
+.mobile-sidebar-backdrop {
+    display: none;
+}
+
 @media (max-width: 1200px) {
     .grid-4 {
         grid-template-columns: repeat(2, 1fr);
@@ -84,13 +112,107 @@
 }
 
 @media (max-width: 768px) {
-    .main-content {
-        margin-left: 0;
-        padding: 20px;
+    .app-layout {
+        flex-direction: column;
+        min-height: 100vh;
     }
 
-    .sidebar {
-        display: none;
+    .mobile-topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 20px;
+        background: rgba(255, 255, 255, 0.92);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+        position: sticky;
+        top: 0;
+        z-index: 100;
+    }
+
+    .mobile-brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .mobile-logo-icon {
+        font-size: 1.4rem;
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.08));
+    }
+
+    .mobile-logo-text {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #1d1d1f;
+        letter-spacing: -0.02em;
+    }
+
+    .mobile-menu-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        background: rgba(0, 0, 0, 0.03);
+        color: #1d1d1f;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .mobile-menu-btn:hover {
+        background: rgba(0, 0, 0, 0.08);
+    }
+
+    .mobile-menu-btn:active {
+        transform: scale(0.95);
+    }
+
+    .mobile-sidebar-backdrop {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        z-index: 1000;
+        animation: fadeIn 0.2s ease;
+    }
+
+    .main-content {
+        margin-left: 0;
+        padding: 0 16px 24px 16px;
+    }
+
+    .page-header {
+        position: sticky;
+        top: 51px;
+        z-index: 90;
+        margin-left: -16px;
+        margin-right: -16px;
+        padding-left: 16px;
+        padding-right: 16px;
+        padding-top: 12px;
+        padding-bottom: 12px;
+        margin-bottom: 18px;
+        background: rgba(245, 245, 247, 0.94);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .page-title {
+        font-size: 1.45rem;
+        margin-bottom: 2px;
+    }
+
+    .page-subtitle {
+        font-size: 0.82rem;
     }
 
     .grid-2,

@@ -224,6 +224,7 @@ export interface StoredCandidate {
   descriptor: number[];
   descriptorModel?: string;
   latestSummary?: string | null;
+  latestRawText?: string | null;
 }
 
 /**

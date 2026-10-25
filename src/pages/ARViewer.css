@@ -15,6 +15,39 @@
     object-fit: cover;
 }
 
+/* Back Button - Top Left */
+.ar-back-btn {
+    position: absolute;
+    top: 24px;
+    left: 24px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 100px;
+    color: white;
+    font-size: 0.85rem;
+    font-weight: 600;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+    text-decoration: none;
+    z-index: 100;
+    transition: all 0.2s ease;
+}
+
+.ar-back-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+    transform: scale(1.03);
+    color: white;
+}
+
+.ar-back-btn svg {
+    flex-shrink: 0;
+}
+
 /* Connection Status Badge - Top Right */
 .connection-status {
     position: absolute;
@@ -74,6 +107,7 @@
     pointer-events: none;
     transition: left 0.05s linear, top 0.05s linear;
     will-change: left, top;
+    max-width: calc(100vw - 48px);
 }
 
 /* Name Row - Name badge + Relation pill */
@@ -94,7 +128,7 @@
     box-shadow: 0 4px 16px rgba(20, 184, 166, 0.35);
 }
 
-.person-name {
+.name-badge .person-name {
     font-size: 1.5rem;
     font-weight: 700;
     color: white;
@@ -113,7 +147,7 @@
     box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
 }
 
-.person-relation {
+.relation-badge .person-relation {
     font-size: 0.95rem;
     font-weight: 600;
     color: white;
@@ -121,25 +155,103 @@
     text-transform: capitalize;
 }
 
-/* Conversation Bubble - Frosted glass */
+/* Conversation Bubble - Compact expandable card */
 .convo-bubble {
-    max-width: 400px;
-    padding: 18px 22px;
+    max-width: 280px;
+    padding: 10px 16px;
     background: rgba(255, 255, 255, 0.2);
     backdrop-filter: blur(30px) saturate(150%);
     -webkit-backdrop-filter: blur(30px) saturate(150%);
-    border-radius: 20px;
+    border-radius: 14px;
     border: 1px solid rgba(255, 255, 255, 0.15);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    pointer-events: auto;
+    cursor: pointer;
+    transition: all 0.25s ease;
 }
 
-.convo-bubble p {
+.convo-bubble:hover {
+    background: rgba(255, 255, 255, 0.28);
+}
+
+.convo-bubble.expanded {
+    max-width: 360px;
+    padding: 14px 18px;
+}
+
+/* Bubble Header Row */
+.convo-bubble-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.convo-bubble-icon {
+    font-size: 0.9rem;
+}
+
+.convo-bubble-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+}
+
+.convo-bubble-chevron {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.6);
+    transition: transform 0.25s ease;
+    margin-left: auto;
+}
+
+.convo-bubble-chevron.open {
+    transform: rotate(180deg);
+}
+
+/* Expanded conversation text */
+.convo-bubble-content {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    max-height: 150px;
+    overflow-y: auto;
+    animation: fadeInText 0.25s ease;
+}
+
+/* Custom scrollbar for the conversation content */
+.convo-bubble-content::-webkit-scrollbar {
+    width: 4px;
+}
+
+.convo-bubble-content::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+}
+
+.convo-bubble-content::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+}
+
+.convo-bubble-text {
     margin: 0;
-    font-size: 1.05rem;
-    line-height: 1.55;
+    font-size: 0.95rem;
+    line-height: 1.5;
     color: rgba(255, 255, 255, 0.95);
     font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
     font-weight: 500;
+    white-space: pre-wrap;
+}
+
+@keyframes fadeInText {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* Bottom Toolbar */
@@ -267,4 +379,84 @@
     box-shadow: inset 0 0 150px rgba(0, 0, 0, 0.5);
     border-radius: 30px;
     z-index: 150;
+}
+
+/* Mobile Responsive AR Viewer */
+@media (max-width: 768px) {
+    .ar-back-btn {
+        top: 14px;
+        left: 14px;
+        padding: 8px 14px;
+        font-size: 0.8rem;
+        gap: 6px;
+    }
+
+    .connection-status {
+        top: 14px;
+        right: 14px;
+        padding: 6px 12px;
+        font-size: 0.75rem;
+    }
+
+    .bottom-toolbar {
+        bottom: 16px;
+        padding: 0 12px;
+        gap: 8px;
+        justify-content: space-around;
+        width: 100%;
+    }
+
+    .logo-btn {
+        width: 40px;
+        height: 40px;
+        font-size: 0.8rem;
+    }
+
+    .spacer {
+        display: none;
+    }
+
+    .control-btn {
+        padding: 10px 14px;
+        font-size: 0.8rem;
+        gap: 6px;
+    }
+
+    .person-overlay {
+        width: calc(100vw - 32px);
+        max-width: 360px;
+        align-items: center;
+    }
+
+    .name-row {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .name-badge {
+        padding: 8px 18px;
+    }
+
+    .name-badge .person-name {
+        font-size: 1.25rem;
+    }
+
+    .relation-badge {
+        padding: 6px 12px;
+    }
+
+    .relation-badge .person-relation {
+        font-size: 0.85rem;
+    }
+
+    .convo-bubble {
+        width: auto;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+
+    .convo-bubble.expanded {
+        width: 100%;
+        max-width: 100%;
+    }
 }

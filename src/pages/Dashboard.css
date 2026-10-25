@@ -231,14 +231,60 @@
 
 @media (max-width: 768px) {
     .stats-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        margin-bottom: 28px;
+    }
+
+    .stat-card {
+        padding: 16px 14px;
+        border-radius: 16px;
+    }
+
+    .stat-icon {
+        font-size: 1.6rem;
+        margin-bottom: 8px;
+    }
+
+    .stat-value {
+        font-size: 1.8rem;
+    }
+
+    .stat-label {
+        font-size: 0.8rem;
+    }
+
+    .dashboard-section {
+        margin-bottom: 28px;
     }
 
     .quick-actions {
         flex-direction: column;
+        gap: 10px;
+    }
+
+    .action-card {
+        padding: 14px 18px;
+        width: 100%;
     }
 
     .people-preview {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .getting-started {
+        padding: 32px 20px;
+        border-radius: 20px;
+    }
+
+    .getting-started h3 {
+        font-size: 1.4rem;
+    }
+}
+
+@media (max-width: 420px) {
+    .stats-grid {
         grid-template-columns: 1fr;
     }
 }

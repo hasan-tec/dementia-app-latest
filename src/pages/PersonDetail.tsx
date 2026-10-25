@@ -1,6 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
+    ArrowLeft,
+    Plus,
+    Glasses,
+    Trash2,
+    Sparkles,
+    MessageSquare,
+    X
+} from 'lucide-react';
+import {
     getPersonById,
     getConversationsForPerson,
     addConversation,
@@ -22,26 +31,25 @@ export function PersonDetail() {
     const [loading, setLoading] = useState(true);
     const [showAddConvo, setShowAddConvo] = useState(false);
     const [convoText, setConvoText] = useState('');
-    const [manualSummary, setManualSummary] = useState('');
     const [useAI, setUseAI] = useState(true);
     const [saving, setSaving] = useState(false);
     const [summarizing, setSummarizing] = useState(false);
     const [deleteConfirm, setDeleteConfirm] = useState(false);
-    const { currentStep } = useTour();
+    const { status, currentStep } = useTour();
 
     // Auto-open conversation modal when tour reaches conversation form steps
     useEffect(() => {
-        if (!currentStep) return;
+        if (status !== 'active' || !currentStep) return;
 
         if (
             currentStep.id === 'step-conversation-text' ||
             currentStep.id === 'step-conversation-save'
         ) {
             setShowAddConvo(true);
-        } else if (currentStep.id === 'step-conversation-add') {
+        } else if (currentStep.id === 'step-conversation-add' || currentStep.id === 'step-nav-ar') {
             setShowAddConvo(false);
         }
-    }, [currentStep?.id]);
+    }, [currentStep?.id, status]);
 
     useEffect(() => {
         loadData();
@@ -63,10 +71,20 @@ export function PersonDetail() {
         }
     }
 
+    /**
+     * Creates a simple fallback summary from the raw conversation text.
+     */
+    function createFallbackSummary(text: string): string {
+        const words = text.trim().split(/\s+/).slice(0, 10);
+        if (words.length < 3) {
+            return 'Had a conversation recently';
+        }
+        return `${words.join(' ')}...`;
+    }
+
     async function handleAddConversation(e: React.FormEvent) {
         e.preventDefault();
         if (!convoText.trim() || !person?.id) return;
-        if (!useAI && !manualSummary.trim()) return;
 
         setSaving(true);
 
@@ -78,14 +96,14 @@ export function PersonDetail() {
                 summary = await summarizeConversation(convoText);
                 setSummarizing(false);
             } else {
-                summary = manualSummary.trim();
+                // Auto-generate a fallback summary from the raw text
+                summary = createFallbackSummary(convoText);
             }
 
             // Save conversation
             const convoId = await addConversation(person.id, convoText, summary);
             await loadData();
             setConvoText('');
-            setManualSummary('');
             setShowAddConvo(false);
 
             // Emit tour event
@@ -148,8 +166,9 @@ export function PersonDetail() {
     return (
         <div className="person-detail">
             {/* Back Link */}
-            <Link to="/people" className="back-link">
-                ← Back to People
+            <Link to="/people" className="back-link" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                <ArrowLeft size={16} />
+                <span>Back to People</span>
             </Link>
 
             {/* Person Header */}
@@ -175,10 +194,15 @@ export function PersonDetail() {
                     <h2 className="section-title">Conversations</h2>
                     <button
                         className="btn btn-primary"
-                        onClick={() => setShowAddConvo(true)}
+                        onClick={() => {
+                            setShowAddConvo(true);
+                            tourEvents.emit('modal:open', { modalId: 'add-conversation' });
+                        }}
                         data-tour="conversation-add"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                     >
-                        <span>➕</span> Add Conversation
+                        <Plus size={16} />
+                        <span>Add Conversation</span>
                     </button>
                 </div>
 
@@ -186,7 +210,9 @@ export function PersonDetail() {
                 {conversations.length > 0 && (
                     <div className="latest-convo glass-card">
                         <div className="latest-convo-label">
-                            <span className="label-icon">👓</span>
+                            <span className="label-icon">
+                                <Glasses size={15} />
+                            </span>
                             <span>Shown in AR View</span>
                         </div>
                         <p className="latest-convo-summary">{conversations[0].summary}</p>
@@ -204,12 +230,15 @@ export function PersonDetail() {
                                     <button
                                         className="btn btn-ghost btn-sm"
                                         onClick={() => handleDeleteConversation(convo.id!)}
+                                        aria-label="Delete conversation"
                                     >
-                                        🗑️
+                                        <Trash2 size={15} />
                                     </button>
                                 </div>
                                 <div className="convo-summary">
-                                    <span className="summary-icon">✨</span>
+                                    <span className="summary-icon">
+                                        <Sparkles size={16} color="#0071e3" />
+                                    </span>
                                     <p>{convo.summary}</p>
                                 </div>
                                 <details className="convo-details">
@@ -221,13 +250,20 @@ export function PersonDetail() {
                     </div>
                 ) : (
                     <div className="empty-conversations glass-card">
-                        <span className="empty-icon">💬</span>
+                        <span className="empty-icon" style={{ display: 'flex', justifyContent: 'center' }}>
+                            <MessageSquare size={36} color="#86868b" />
+                        </span>
                         <p>No conversations logged yet</p>
                         <button
                             className="btn btn-primary"
-                            onClick={() => setShowAddConvo(true)}
+                            onClick={() => {
+                                setShowAddConvo(true);
+                                tourEvents.emit('modal:open', { modalId: 'add-conversation' });
+                            }}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                         >
-                            Add First Conversation
+                            <Plus size={16} />
+                            <span>Add First Conversation</span>
                         </button>
                     </div>
                 )}
@@ -235,15 +271,27 @@ export function PersonDetail() {
 
             {/* Add Conversation Modal */}
             {showAddConvo && (
-                <div className="modal-overlay" onClick={() => setShowAddConvo(false)}>
+                <div
+                    className="modal-overlay"
+                    onClick={() => {
+                        setConvoText('');
+                        setShowAddConvo(false);
+                        tourEvents.emit('modal:close', { modalId: 'add-conversation' });
+                    }}
+                >
                     <div className="modal" onClick={(e) => e.stopPropagation()}>
                         <div className="modal-header">
                             <h2 className="modal-title">Add Conversation</h2>
                             <button
                                 className="btn btn-ghost btn-icon"
-                                onClick={() => setShowAddConvo(false)}
+                                onClick={() => {
+                                    setConvoText('');
+                                    setShowAddConvo(false);
+                                    tourEvents.emit('modal:close', { modalId: 'add-conversation' });
+                                }}
+                                aria-label="Close modal"
                             >
-                                ✕
+                                <X size={18} />
                             </button>
                         </div>
 
@@ -275,22 +323,10 @@ export function PersonDetail() {
                                     />
                                     <span className="toggle-text">Use AI to summarize</span>
                                 </label>
+                                {!useAI && (
+                                    <p className="ai-toggle-hint">A summary will be auto-generated from the conversation text.</p>
+                                )}
                             </div>
-
-                            {/* Manual Summary Input (when AI is disabled) */}
-                            {!useAI && (
-                                <div className="input-group">
-                                    <label className="input-label">Your Summary (shown in AR)</label>
-                                    <input
-                                        type="text"
-                                        className="input"
-                                        placeholder="e.g., Talked about the hackathon this weekend"
-                                        value={manualSummary}
-                                        onChange={(e) => setManualSummary(e.target.value)}
-                                        required
-                                    />
-                                </div>
-                            )}
 
                             {summarizing && (
                                 <div className="summarizing-indicator">
@@ -305,8 +341,8 @@ export function PersonDetail() {
                                     className="btn btn-secondary"
                                     onClick={() => {
                                         setConvoText('');
-                                        setManualSummary('');
                                         setShowAddConvo(false);
+                                        tourEvents.emit('modal:close', { modalId: 'add-conversation' });
                                     }}
                                 >
                                     Cancel
@@ -314,7 +350,7 @@ export function PersonDetail() {
                                 <button
                                     type="submit"
                                     className="btn btn-primary"
-                                    disabled={saving || !convoText.trim() || (!useAI && !manualSummary.trim())}
+                                    disabled={saving || !convoText.trim()}
                                     data-tour="conversation-save"
                                 >
                                     {saving ? 'Saving...' : 'Add Conversation'}

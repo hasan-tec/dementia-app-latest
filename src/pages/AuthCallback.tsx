@@ -5,6 +5,7 @@
 
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { RefreshCw, AlertCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import './Auth.css';
 
@@ -67,7 +68,7 @@ export function AuthCallback() {
     <div className="auth-container">
       <div className="auth-card" style={{ textAlign: 'center' }}>
         <div className="auth-header">
-          <div className="auth-logo">🔄</div>
+          <div className="auth-logo"><RefreshCw size={28} color="#ffffff" strokeWidth={2.2} /></div>
           <h1 className="auth-title">Verifying Account</h1>
           <p className="auth-subtitle">Finalizing your authentication, please wait...</p>
         </div>
@@ -75,7 +76,7 @@ export function AuthCallback() {
         {errorMessage ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div className="auth-error-banner">
-              <span>⚠️</span>
+              <span><AlertCircle size={16} /></span>
               <span>{errorMessage}</span>
             </div>
             <Link to="/login" className="auth-button" style={{ textDecoration: 'none' }}>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import './Tour.css';
 
 interface TourSpotlightProps {
@@ -6,19 +6,78 @@ interface TourSpotlightProps {
 }
 
 export const TourSpotlight: React.FC<TourSpotlightProps> = ({ rect }) => {
-  if (!rect) return null;
+  const [viewport, setViewport] = useState({
+    width: window.innerWidth,
+    height: window.innerHeight,
+  });
 
-  const PADDING = 6;
+  useEffect(() => {
+    const handleResize = () => {
+      setViewport({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+    };
+    window.addEventListener('resize', handleResize, { passive: true });
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  if (!rect) {
+    return <div className="tour-spotlight-backdrop-fallback" aria-hidden="true" />;
+  }
+
+  const PADDING = 8;
+  const x = Math.max(0, rect.left - PADDING);
+  const y = Math.max(0, rect.top - PADDING);
+  const w = rect.width + PADDING * 2;
+  const h = rect.height + PADDING * 2;
+  const r = 12; // corner radius
+
+  const vw = viewport.width;
+  const vh = viewport.height;
+
+  // SVG path with evenodd rule: Outer viewport minus the rounded rectangle hole
+  const path = `
+    M 0 0
+    H ${vw}
+    V ${vh}
+    H 0
+    Z
+    M ${x + r} ${y}
+    H ${x + w - r}
+    A ${r} ${r} 0 0 1 ${x + w} ${y + r}
+    V ${y + h - r}
+    A ${r} ${r} 0 0 1 ${x + w - r} ${y + h}
+    H ${x + r}
+    A ${r} ${r} 0 0 1 ${x} ${y + h - r}
+    V ${y + r}
+    A ${r} ${r} 0 0 1 ${x + r} ${y}
+    Z
+  `;
 
   return (
-    <div className="tour-spotlight-overlay" aria-hidden="true">
+    <div className="tour-spotlight-container" aria-hidden="true">
+      <svg
+        className="tour-spotlight-svg"
+        viewBox={`0 0 ${vw} ${vh}`}
+        preserveAspectRatio="none"
+      >
+        <path
+          d={path}
+          fillRule="evenodd"
+          className="tour-spotlight-path"
+        />
+      </svg>
+
+      {/* Glowing neon-blue focus ring around the target */}
       <div
-        className="tour-spotlight-cutout"
+        className="tour-spotlight-ring"
         style={{
-          top: Math.max(0, rect.top - PADDING),
-          left: Math.max(0, rect.left - PADDING),
-          width: rect.width + PADDING * 2,
-          height: rect.height + PADDING * 2,
+          top: y,
+          left: x,
+          width: w,
+          height: h,
+          borderRadius: r,
         }}
       />
     </div>
