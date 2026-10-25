@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
+import { MessageSquare, ChevronDown, Brain, Video, VideoOff, Glasses, ArrowLeft } from 'lucide-react';
 import { getAllPeople, getLatestConversation } from '../db/database';
 import type { StoredCandidate } from '../services/faceDetection';
 import { useARSession } from '../features/ar/useARSession';
@@ -75,10 +76,7 @@ export function ARViewer() {
 
             {/* Back Button - Top Left */}
             <Link to="/" className="ar-back-btn" title="Back to Home" data-tour="ar-home">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M19 12H5" />
-                    <path d="M12 19l-7-7 7-7" />
-                </svg>
+                <ArrowLeft size={18} strokeWidth={2.5} />
                 <span>Home</span>
             </Link>
 
@@ -118,11 +116,11 @@ export function ARViewer() {
                             onClick={() => setIsConvoExpanded(prev => !prev)}
                         >
                             <div className="convo-bubble-header">
-                                <span className="convo-bubble-icon">💬</span>
+                                <MessageSquare size={15} className="convo-bubble-icon" />
                                 <span className="convo-bubble-label">
                                     {isConvoExpanded ? 'Recent conversation' : 'View conversation'}
                                 </span>
-                                <span className={`convo-bubble-chevron ${isConvoExpanded ? 'open' : ''}`}>▾</span>
+                                <ChevronDown size={14} className={`convo-bubble-chevron ${isConvoExpanded ? 'open' : ''}`} />
                             </div>
                             {isConvoExpanded && (
                                 <div className="convo-bubble-content">
@@ -138,19 +136,13 @@ export function ARViewer() {
 
             {/* Bottom Toolbar */}
             <div className="bottom-toolbar">
-                <Link to="/" className="logo-btn" title="Back to Dashboard" data-tour="ar-home">
-                    N
+                <Link to="/" className="logo-btn" title="Back to Dashboard" data-tour="ar-home" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Brain size={20} color="#0071e3" strokeWidth={2.2} />
                 </Link>
 
                 <div className="center-controls">
                     <button className="control-btn" onClick={handleCameraToggle} data-tour="ar-camera-toggle">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M23 7l-7 5 7 5V7z" />
-                            <rect x="1" y="5" width="15" height="14" rx="2" />
-                            {!isCameraActive && (
-                                <line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" strokeWidth="2" />
-                            )}
-                        </svg>
+                        {isCameraActive ? <VideoOff size={18} /> : <Video size={18} />}
                         <span>{isCameraActive ? 'Stop Video' : 'Start Camera'}</span>
                     </button>
 
@@ -158,8 +150,10 @@ export function ARViewer() {
                         className={`control-btn primary ${isRayBanMode ? 'active' : ''}`}
                         onClick={toggleRayBanMode}
                         title="Display preview simulation"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
                     >
-                        {isRayBanMode ? 'Exit Glasses View' : 'Glasses Preview (Simulation)'}
+                        <Glasses size={18} />
+                        <span>{isRayBanMode ? 'Exit Glasses View' : 'Glasses Preview (Simulation)'}</span>
                     </button>
                 </div>
 

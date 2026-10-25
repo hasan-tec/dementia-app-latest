@@ -1,6 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
+    ArrowLeft,
+    Plus,
+    Glasses,
+    Trash2,
+    Sparkles,
+    MessageSquare,
+    X
+} from 'lucide-react';
+import {
     getPersonById,
     getConversationsForPerson,
     addConversation,
@@ -157,8 +166,9 @@ export function PersonDetail() {
     return (
         <div className="person-detail">
             {/* Back Link */}
-            <Link to="/people" className="back-link">
-                ← Back to People
+            <Link to="/people" className="back-link" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                <ArrowLeft size={16} />
+                <span>Back to People</span>
             </Link>
 
             {/* Person Header */}
@@ -189,8 +199,10 @@ export function PersonDetail() {
                             tourEvents.emit('modal:open', { modalId: 'add-conversation' });
                         }}
                         data-tour="conversation-add"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                     >
-                        <span>➕</span> Add Conversation
+                        <Plus size={16} />
+                        <span>Add Conversation</span>
                     </button>
                 </div>
 
@@ -198,7 +210,9 @@ export function PersonDetail() {
                 {conversations.length > 0 && (
                     <div className="latest-convo glass-card">
                         <div className="latest-convo-label">
-                            <span className="label-icon">👓</span>
+                            <span className="label-icon">
+                                <Glasses size={15} />
+                            </span>
                             <span>Shown in AR View</span>
                         </div>
                         <p className="latest-convo-summary">{conversations[0].summary}</p>
@@ -216,12 +230,15 @@ export function PersonDetail() {
                                     <button
                                         className="btn btn-ghost btn-sm"
                                         onClick={() => handleDeleteConversation(convo.id!)}
+                                        aria-label="Delete conversation"
                                     >
-                                        🗑️
+                                        <Trash2 size={15} />
                                     </button>
                                 </div>
                                 <div className="convo-summary">
-                                    <span className="summary-icon">✨</span>
+                                    <span className="summary-icon">
+                                        <Sparkles size={16} color="#0071e3" />
+                                    </span>
                                     <p>{convo.summary}</p>
                                 </div>
                                 <details className="convo-details">
@@ -233,7 +250,9 @@ export function PersonDetail() {
                     </div>
                 ) : (
                     <div className="empty-conversations glass-card">
-                        <span className="empty-icon">💬</span>
+                        <span className="empty-icon" style={{ display: 'flex', justifyContent: 'center' }}>
+                            <MessageSquare size={36} color="#86868b" />
+                        </span>
                         <p>No conversations logged yet</p>
                         <button
                             className="btn btn-primary"
@@ -241,8 +260,10 @@ export function PersonDetail() {
                                 setShowAddConvo(true);
                                 tourEvents.emit('modal:open', { modalId: 'add-conversation' });
                             }}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                         >
-                            Add First Conversation
+                            <Plus size={16} />
+                            <span>Add First Conversation</span>
                         </button>
                     </div>
                 )}
@@ -268,8 +289,9 @@ export function PersonDetail() {
                                     setShowAddConvo(false);
                                     tourEvents.emit('modal:close', { modalId: 'add-conversation' });
                                 }}
+                                aria-label="Close modal"
                             >
-                                ✕
+                                <X size={18} />
                             </button>
                         </div>
 

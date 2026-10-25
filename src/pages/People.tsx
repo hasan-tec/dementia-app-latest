@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Search, X, Trash2, Check, User, Camera } from 'lucide-react';
+import { Plus, Search, X, Trash2, Check, User, Camera, Users, CheckCircle2, AlertTriangle, AlertOctagon, XCircle } from 'lucide-react';
 import { getAllPeople, addPerson, deletePerson, type Person } from '../db/database';
 import { EnrollmentController, type EnrollmentState } from '../features/people/enrollment';
 import { tourEvents } from '../features/onboarding/events';
@@ -191,7 +191,7 @@ export function People() {
     return (
         <div className="people-page">
             <header className="page-header">
-                <div>
+                <div className="page-header-text">
                     <h1 className="page-title">People</h1>
                     <p className="page-subtitle">Manage registered faces and their details</p>
                 </div>
@@ -273,7 +273,9 @@ export function People() {
                 </div>
             ) : (
                 <div className="empty-state">
-                    <div className="empty-state-icon">👥</div>
+                    <div className="empty-state-icon" style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}>
+                        <Users size={48} color="#86868b" strokeWidth={1.75} />
+                    </div>
                     <h3 className="empty-state-title">
                         {searchQuery ? 'No results found' : 'No people registered yet'}
                     </h3>
@@ -349,25 +351,25 @@ export function People() {
                                         )}
                                         {enrollmentState.step === 'ready' && (
                                             <>
-                                                <span className="status-icon">✅</span>
+                                                <CheckCircle2 size={16} color="#34c759" className="status-icon" />
                                                 <span>Face detected and verified! Ready for AR recognition.</span>
                                             </>
                                         )}
                                         {enrollmentState.step === 'error_zero_faces' && (
                                             <>
-                                                <span className="status-icon">⚠️</span>
+                                                <AlertTriangle size={16} color="#ff9500" className="status-icon" />
                                                 <span>No face detected. You may save photo without recognition or try another photo.</span>
                                             </>
                                         )}
                                         {enrollmentState.step === 'error_multiple_faces' && (
                                             <>
-                                                <span className="status-icon">🚫</span>
+                                                <AlertOctagon size={16} color="#ff3b30" className="status-icon" />
                                                 <span>Multiple faces detected. Please upload a photo with only one person.</span>
                                             </>
                                         )}
                                         {(enrollmentState.step === 'error_model_failed' || enrollmentState.step === 'error_decode_failed') && (
                                             <>
-                                                <span className="status-icon">❌</span>
+                                                <XCircle size={16} color="#ff3b30" className="status-icon" />
                                                 <span>{enrollmentState.errorMessage || 'Photo processing error.'}</span>
                                             </>
                                         )}

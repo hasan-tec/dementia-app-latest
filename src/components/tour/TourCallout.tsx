@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { X, ArrowRight } from 'lucide-react';
 import type { TourStep } from '../../features/onboarding/steps';
 import './Tour.css';
 
@@ -145,7 +146,7 @@ export const TourCallout: React.FC<TourCalloutProps> = ({
           title="Pause guide (Resume anytime from Help or Sidebar)"
           aria-label="Pause guide"
         >
-          ✕
+          <X size={15} />
         </button>
       </div>
 
@@ -164,7 +165,7 @@ export const TourCallout: React.FC<TourCalloutProps> = ({
           onClick={() => onNavigate(navPath)}
         >
           <span>{navLabel}</span>
-          <span>→</span>
+          <ArrowRight size={14} />
         </button>
       )}
 

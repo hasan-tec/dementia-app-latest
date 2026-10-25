@@ -1,5 +1,14 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { X } from 'lucide-react';
+import {
+    X,
+    Brain,
+    LayoutDashboard,
+    Users,
+    Glasses,
+    HelpCircle,
+    Compass,
+    LogOut,
+} from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTour } from '../tour/TourProvider';
 import './Sidebar.css';
@@ -24,7 +33,9 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) {
         <aside className={`sidebar ${isOpen ? 'mobile-open' : ''}`}>
             <div className="sidebar-header">
                 <div className="sidebar-logo">
-                    <span className="logo-icon">🧠</span>
+                    <span className="logo-icon">
+                        <Brain size={24} color="#0071e3" strokeWidth={2.2} />
+                    </span>
                     <span className="logo-text">MemoryAR</span>
                 </div>
                 <button
@@ -45,7 +56,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) {
                     onClick={onClose}
                     end
                 >
-                    <span className="nav-icon">📊</span>
+                    <LayoutDashboard size={20} className="nav-icon" />
                     <span className="nav-label">Dashboard</span>
                 </NavLink>
 
@@ -55,7 +66,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) {
                     data-tour="nav-people"
                     onClick={onClose}
                 >
-                    <span className="nav-icon">👥</span>
+                    <Users size={20} className="nav-icon" />
                     <span className="nav-label">People</span>
                 </NavLink>
 
@@ -65,7 +76,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) {
                     data-tour="nav-ar"
                     onClick={onClose}
                 >
-                    <span className="nav-icon">👓</span>
+                    <Glasses size={20} className="nav-icon" />
                     <span className="nav-label">AR Viewer</span>
                 </NavLink>
 
@@ -75,7 +86,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) {
                     data-tour="nav-help"
                     onClick={onClose}
                 >
-                    <span className="nav-icon">💡</span>
+                    <HelpCircle size={20} className="nav-icon" />
                     <span className="nav-label">Help & Guide</span>
                 </NavLink>
             </nav>
@@ -90,7 +101,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) {
                     }}
                     title="Start or restart interactive tour"
                 >
-                    <span>🧭</span>
+                    <Compass size={18} />
                     <span>Replay Tour</span>
                 </button>
 
@@ -113,7 +124,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) {
                         title="Sign out of account"
                         aria-label="Sign out"
                     >
-                        🚪
+                        <LogOut size={18} />
                     </button>
                 </div>
             </div>

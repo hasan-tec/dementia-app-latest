@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
-import { Menu } from 'lucide-react';
+import { Menu, Brain } from 'lucide-react';
 import { Sidebar } from './Sidebar';
 import { useTour } from '../tour/TourProvider';
 import './Layout.css';
@@ -28,7 +28,9 @@ export function Layout() {
             {/* Mobile Top Header (visible only on <= 768px) */}
             <header className="mobile-topbar">
                 <div className="mobile-brand">
-                    <span className="mobile-logo-icon">🧠</span>
+                    <span className="mobile-logo-icon">
+                        <Brain size={22} color="#0071e3" strokeWidth={2.2} />
+                    </span>
                     <span className="mobile-logo-text">MemoryAR</span>
                 </div>
                 <button
