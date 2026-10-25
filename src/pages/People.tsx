@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import { Plus, Search, X, Trash2, Check, User, Camera } from 'lucide-react';
 import { getAllPeople, addPerson, deletePerson, type Person } from '../db/database';
 import { EnrollmentController, type EnrollmentState } from '../features/people/enrollment';
 import { tourEvents } from '../features/onboarding/events';
@@ -27,6 +28,7 @@ export function People() {
     });
     const [saving, setSaving] = useState(false);
     const [deleteConfirm, setDeleteConfirm] = useState<string | number | null>(null);
+    const [deleting, setDeleting] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const enrollmentControllerRef = useRef<EnrollmentController | null>(null);
     const { currentStep } = useTour();
@@ -113,12 +115,15 @@ export function People() {
     }
 
     async function handleDelete(id: string | number) {
+        setDeleting(true);
         try {
             await deletePerson(id);
             await loadPeople();
             setDeleteConfirm(null);
         } catch (error) {
             console.error('Error deleting person:', error);
+        } finally {
+            setDeleting(false);
         }
     }
 
@@ -134,6 +139,8 @@ export function People() {
         p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.relation.toLowerCase().includes(searchQuery.toLowerCase())
     );
+
+    const personToDelete = people.find(p => p.id === deleteConfirm);
 
     const isSaveDisabled =
         saving ||
@@ -163,13 +170,14 @@ export function People() {
                     <p className="page-subtitle">Manage registered faces and their details</p>
                 </div>
                 <button className="btn btn-primary" onClick={() => setShowModal(true)} data-tour="people-add">
-                    + Add Person
+                    <Plus size={18} />
+                    <span>Add Person</span>
                 </button>
             </header>
 
             {/* Search Bar */}
             <div className="search-bar">
-                <span className="search-icon">🔍</span>
+                <Search size={18} className="search-icon" />
                 <input
                     type="text"
                     className="search-input"
@@ -178,7 +186,9 @@ export function People() {
                     onChange={(e) => setSearchQuery(e.target.value)}
                 />
                 {searchQuery && (
-                    <button className="search-clear" onClick={() => setSearchQuery('')}>✕</button>
+                    <button className="search-clear" onClick={() => setSearchQuery('')} aria-label="Clear search">
+                        <X size={15} />
+                    </button>
                 )}
             </div>
 
@@ -187,59 +197,40 @@ export function People() {
                 <div className="people-grid">
                     {filteredPeople.map((person) => (
                         <div key={person.id} className="person-card">
+                            <button
+                                type="button"
+                                className="delete-btn"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setDeleteConfirm(person.id!);
+                                }}
+                                title={`Delete ${person.name}`}
+                                aria-label={`Delete ${person.name}`}
+                            >
+                                <Trash2 size={15} />
+                            </button>
+
                             <Link to={`/people/${person.id}`} className="person-card-content" data-tour="person-view">
                                 <div className="person-avatar">
                                     {person.photoUrl ? (
-                                        <img src={person.photoUrl} alt={person.name} />
+                                        <img src={person.photoUrl} alt={person.name} className="person-avatar-img" />
                                     ) : (
                                         <div className="person-avatar-placeholder">
-                                            {person.name.charAt(0)}
+                                            {person.name ? person.name.charAt(0).toUpperCase() : <User size={36} />}
                                         </div>
                                     )}
                                     {person.faceDescriptor && (
-                                        <span className="face-badge" title="Face recognition enabled">✓</span>
+                                        <span className="face-badge" title="Face recognition enabled">
+                                            <Check size={13} strokeWidth={3} />
+                                        </span>
                                     )}
                                 </div>
                                 <div className="person-info">
                                     <h3 className="person-name">{person.name}</h3>
-                                    <p className="person-relation">{person.relation}</p>
+                                    <span className="person-relation">{person.relation}</span>
                                 </div>
                             </Link>
-
-                            <button
-                                className="delete-btn"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    setDeleteConfirm(person.id!);
-                                }}
-                                title="Delete person"
-                            >
-                                🗑️
-                            </button>
-
-                            {/* Delete Confirmation Modal */}
-                            {deleteConfirm === person.id && (
-                                <div className="delete-confirm-overlay" onClick={() => setDeleteConfirm(null)}>
-                                    <div className="delete-confirm-modal" onClick={(e) => e.stopPropagation()}>
-                                        <h4>Delete {person.name}?</h4>
-                                        <p>This will also delete all conversation history with this person.</p>
-                                        <div className="delete-confirm-actions">
-                                            <button
-                                                className="btn btn-danger btn-sm"
-                                                onClick={() => handleDelete(person.id!)}
-                                            >
-                                                Delete
-                                            </button>
-                                            <button
-                                                className="btn btn-ghost btn-sm"
-                                                onClick={() => setDeleteConfirm(null)}
-                                            >
-                                                Cancel
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
                         </div>
                     ))}
                 </div>
@@ -274,8 +265,9 @@ export function People() {
                                     resetForm();
                                     setShowModal(false);
                                 }}
+                                aria-label="Close modal"
                             >
-                                ✕
+                                <X size={20} />
                             </button>
                         </div>
 
@@ -291,7 +283,7 @@ export function People() {
                                         <img src={enrollmentState.previewUrl} alt="Preview" />
                                     ) : (
                                         <div className="photo-placeholder">
-                                            <span className="photo-icon">📷</span>
+                                            <Camera size={28} className="photo-icon" />
                                             <span className="photo-text">Click to upload photo</span>
                                         </div>
                                     )}
@@ -404,6 +396,46 @@ export function People() {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirmation Modal (Popup) */}
+            {personToDelete && (
+                <div className="modal-overlay" onClick={() => !deleting && setDeleteConfirm(null)}>
+                    <div className="modal delete-modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="delete-modal-icon-wrap">
+                            <Trash2 size={26} />
+                        </div>
+                        <h2 className="delete-modal-title">Delete {personToDelete.name}?</h2>
+                        <p className="delete-modal-desc">
+                            Are you sure you want to delete <strong>{personToDelete.name}</strong>? This will permanently remove their face recognition profile and all associated conversation history.
+                        </p>
+                        <div className="delete-modal-actions">
+                            <button
+                                type="button"
+                                className="btn btn-secondary"
+                                onClick={() => setDeleteConfirm(null)}
+                                disabled={deleting}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                className="btn btn-danger"
+                                onClick={() => handleDelete(personToDelete.id!)}
+                                disabled={deleting}
+                            >
+                                {deleting ? (
+                                    <>
+                                        <div className="spinner" style={{ width: 14, height: 14, borderTopColor: 'white' }}></div>
+                                        <span>Deleting...</span>
+                                    </>
+                                ) : (
+                                    'Delete Person'
+                                )}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

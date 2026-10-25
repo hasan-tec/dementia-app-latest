@@ -9,6 +9,7 @@ export function ARViewer() {
     const videoRef = useRef<HTMLVideoElement>(null);
     const overlayRef = useRef<HTMLDivElement>(null);
     const [isRayBanMode, setIsRayBanMode] = useState(false);
+    const [isConvoExpanded, setIsConvoExpanded] = useState(false);
 
     /**
      * Loads registered gallery candidates with their latest conversation summaries
@@ -28,6 +29,7 @@ export function ARViewer() {
                         descriptor: person.faceDescriptor,
                         descriptorModel: 'face-api-v1',
                         latestSummary: convo?.summary || 'No recent conversations recorded.',
+                        latestRawText: convo?.rawText || null,
                     });
                 }
             }
@@ -71,6 +73,15 @@ export function ARViewer() {
             {/* Camera Feed */}
             <video ref={videoRef} className="ar-camera-feed" autoPlay playsInline muted />
 
+            {/* Back Button - Top Left */}
+            <Link to="/" className="ar-back-btn" title="Back to Home">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M19 12H5" />
+                    <path d="M12 19l-7-7 7-7" />
+                </svg>
+                <span>Home</span>
+            </Link>
+
             {/* Connection Status Badge */}
             <div className={`connection-status ${isTracking ? 'tracking' : ''}`} data-tour="ar-status">
                 <span className="status-dot"></span>
@@ -101,9 +112,25 @@ export function ARViewer() {
                             </div>
                         </div>
 
-                        {/* Conversation Summary */}
-                        <div className="convo-bubble">
-                            <p>{activeMatch.person.latestSummary}</p>
+                        {/* Conversation Summary - Compact card, expands on click */}
+                        <div
+                            className={`convo-bubble ${isConvoExpanded ? 'expanded' : ''}`}
+                            onClick={() => setIsConvoExpanded(prev => !prev)}
+                        >
+                            <div className="convo-bubble-header">
+                                <span className="convo-bubble-icon">💬</span>
+                                <span className="convo-bubble-label">
+                                    {isConvoExpanded ? 'Recent conversation' : 'View conversation'}
+                                </span>
+                                <span className={`convo-bubble-chevron ${isConvoExpanded ? 'open' : ''}`}>▾</span>
+                            </div>
+                            {isConvoExpanded && (
+                                <div className="convo-bubble-content">
+                                    <p className="convo-bubble-text">
+                                        {activeMatch.person.latestRawText || activeMatch.person.latestSummary}
+                                    </p>
+                                </div>
+                            )}
                         </div>
                     </>
                 )}

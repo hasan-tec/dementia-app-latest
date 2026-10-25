@@ -73,6 +73,15 @@
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
 }
 
+/* Mobile Topbar (Hidden on Desktop) */
+.mobile-topbar {
+    display: none;
+}
+
+.mobile-sidebar-backdrop {
+    display: none;
+}
+
 @media (max-width: 1200px) {
     .grid-4 {
         grid-template-columns: repeat(2, 1fr);
@@ -84,13 +93,90 @@
 }
 
 @media (max-width: 768px) {
-    .main-content {
-        margin-left: 0;
-        padding: 20px;
+    .app-layout {
+        flex-direction: column;
+        min-height: 100vh;
     }
 
-    .sidebar {
-        display: none;
+    .mobile-topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 20px;
+        background: rgba(255, 255, 255, 0.92);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+        position: sticky;
+        top: 0;
+        z-index: 100;
+    }
+
+    .mobile-brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .mobile-logo-icon {
+        font-size: 1.4rem;
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.08));
+    }
+
+    .mobile-logo-text {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #1d1d1f;
+        letter-spacing: -0.02em;
+    }
+
+    .mobile-menu-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        background: rgba(0, 0, 0, 0.03);
+        color: #1d1d1f;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .mobile-menu-btn:hover {
+        background: rgba(0, 0, 0, 0.08);
+    }
+
+    .mobile-menu-btn:active {
+        transform: scale(0.95);
+    }
+
+    .mobile-sidebar-backdrop {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        z-index: 1000;
+        animation: fadeIn 0.2s ease;
+    }
+
+    .main-content {
+        margin-left: 0;
+        padding: 20px 16px;
+    }
+
+    .page-title {
+        font-size: 1.75rem;
+        margin-bottom: 4px;
+    }
+
+    .page-header {
+        margin-bottom: 24px;
+        flex-wrap: wrap;
+        gap: 12px;
     }
 
     .grid-2,

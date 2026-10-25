@@ -236,6 +236,13 @@
     color: var(--color-text-secondary);
 }
 
+.ai-toggle-hint {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-tertiary);
+    margin-top: var(--space-2);
+    font-style: italic;
+}
+
 /* Not Found */
 .not-found {
     display: flex;
@@ -263,10 +270,49 @@
     .person-header {
         flex-direction: column;
         text-align: center;
+        padding: 24px 18px;
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+
+    .person-avatar {
+        width: 88px;
+        height: 88px;
+        object-position: top center;
+    }
+
+    .person-header-name {
+        font-size: 1.6rem;
     }
 
     .person-header-actions {
         width: 100%;
         justify-content: center;
+    }
+
+    .section-header {
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+
+    .section-title {
+        font-size: 1.25rem;
+    }
+
+    .latest-convo {
+        padding: 18px 16px;
+        margin-bottom: 18px;
+    }
+
+    .latest-convo-summary {
+        font-size: 1rem;
+    }
+
+    .modal {
+        width: 92%;
+        padding: 24px 18px;
+        max-height: 90vh;
+        overflow-y: auto;
     }
 }

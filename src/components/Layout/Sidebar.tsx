@@ -1,25 +1,40 @@
 import { NavLink, useNavigate } from 'react-router-dom';
+import { X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTour } from '../tour/TourProvider';
 import './Sidebar.css';
 
-export function Sidebar() {
+interface SidebarProps {
+    isOpen?: boolean;
+    onClose?: () => void;
+}
+
+export function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) {
     const { user, signOut } = useAuth();
     const { startTour } = useTour();
     const navigate = useNavigate();
 
     async function handleLogout() {
+        onClose?.();
         await signOut();
         navigate('/login', { replace: true });
     }
 
     return (
-        <aside className="sidebar">
+        <aside className={`sidebar ${isOpen ? 'mobile-open' : ''}`}>
             <div className="sidebar-header">
                 <div className="sidebar-logo">
                     <span className="logo-icon">🧠</span>
                     <span className="logo-text">MemoryAR</span>
                 </div>
+                <button
+                    type="button"
+                    className="sidebar-close-btn"
+                    onClick={onClose}
+                    aria-label="Close navigation"
+                >
+                    <X size={20} />
+                </button>
             </div>
 
             <nav className="sidebar-nav">
@@ -27,6 +42,7 @@ export function Sidebar() {
                     to="/"
                     className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
                     data-tour="nav-dashboard"
+                    onClick={onClose}
                     end
                 >
                     <span className="nav-icon">📊</span>
@@ -37,6 +53,7 @@ export function Sidebar() {
                     to="/people"
                     className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
                     data-tour="nav-people"
+                    onClick={onClose}
                 >
                     <span className="nav-icon">👥</span>
                     <span className="nav-label">People</span>
@@ -46,6 +63,7 @@ export function Sidebar() {
                     to="/ar"
                     className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
                     data-tour="nav-ar"
+                    onClick={onClose}
                 >
                     <span className="nav-icon">👓</span>
                     <span className="nav-label">AR Viewer</span>
@@ -55,6 +73,7 @@ export function Sidebar() {
                     to="/help"
                     className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
                     data-tour="nav-help"
+                    onClick={onClose}
                 >
                     <span className="nav-icon">💡</span>
                     <span className="nav-label">Help & Guide</span>
@@ -65,6 +84,7 @@ export function Sidebar() {
                 <button
                     className="sidebar-guide-btn"
                     onClick={() => {
+                        onClose?.();
                         startTour();
                         navigate('/');
                     }}

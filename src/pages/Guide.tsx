@@ -14,7 +14,7 @@ export function Guide() {
 
   return (
     <div className="dashboard" style={{ maxWidth: '860px', margin: '0 auto' }}>
-      <header className="page-header" style={{ marginBottom: '32px' }}>
+      <header className="page-header" style={{ marginBottom: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px' }}>
         <div>
           <h1 className="page-title">Help & Guide</h1>
           <p className="page-subtitle">Learn how to configure face recognition and memory anchors</p>
@@ -31,9 +31,9 @@ export function Guide() {
         </button>
       </header>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
         {/* Core Concepts Card */}
-        <div className="stats-card" style={{ padding: '28px' }}>
+        <div className="stat-card glass-card" style={{ padding: '24px' }}>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 16px 0', color: '#1d1d1f' }}>
             🌟 How MemoryAR Works
           </h2>
@@ -63,7 +63,7 @@ export function Guide() {
         </div>
 
         {/* Best Practices */}
-        <div className="stats-card" style={{ padding: '28px' }}>
+        <div className="stat-card glass-card" style={{ padding: '24px' }}>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 16px 0', color: '#1d1d1f' }}>
             💡 Best Practices for Best Recognition
           </h2>

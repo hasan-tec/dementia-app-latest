@@ -22,7 +22,6 @@ export function PersonDetail() {
     const [loading, setLoading] = useState(true);
     const [showAddConvo, setShowAddConvo] = useState(false);
     const [convoText, setConvoText] = useState('');
-    const [manualSummary, setManualSummary] = useState('');
     const [useAI, setUseAI] = useState(true);
     const [saving, setSaving] = useState(false);
     const [summarizing, setSummarizing] = useState(false);
@@ -63,10 +62,20 @@ export function PersonDetail() {
         }
     }
 
+    /**
+     * Creates a simple fallback summary from the raw conversation text.
+     */
+    function createFallbackSummary(text: string): string {
+        const words = text.trim().split(/\s+/).slice(0, 10);
+        if (words.length < 3) {
+            return 'Had a conversation recently';
+        }
+        return `${words.join(' ')}...`;
+    }
+
     async function handleAddConversation(e: React.FormEvent) {
         e.preventDefault();
         if (!convoText.trim() || !person?.id) return;
-        if (!useAI && !manualSummary.trim()) return;
 
         setSaving(true);
 
@@ -78,14 +87,14 @@ export function PersonDetail() {
                 summary = await summarizeConversation(convoText);
                 setSummarizing(false);
             } else {
-                summary = manualSummary.trim();
+                // Auto-generate a fallback summary from the raw text
+                summary = createFallbackSummary(convoText);
             }
 
             // Save conversation
             const convoId = await addConversation(person.id, convoText, summary);
             await loadData();
             setConvoText('');
-            setManualSummary('');
             setShowAddConvo(false);
 
             // Emit tour event
@@ -275,22 +284,10 @@ export function PersonDetail() {
                                     />
                                     <span className="toggle-text">Use AI to summarize</span>
                                 </label>
+                                {!useAI && (
+                                    <p className="ai-toggle-hint">A summary will be auto-generated from the conversation text.</p>
+                                )}
                             </div>
-
-                            {/* Manual Summary Input (when AI is disabled) */}
-                            {!useAI && (
-                                <div className="input-group">
-                                    <label className="input-label">Your Summary (shown in AR)</label>
-                                    <input
-                                        type="text"
-                                        className="input"
-                                        placeholder="e.g., Talked about the hackathon this weekend"
-                                        value={manualSummary}
-                                        onChange={(e) => setManualSummary(e.target.value)}
-                                        required
-                                    />
-                                </div>
-                            )}
 
                             {summarizing && (
                                 <div className="summarizing-indicator">
@@ -305,7 +302,6 @@ export function PersonDetail() {
                                     className="btn btn-secondary"
                                     onClick={() => {
                                         setConvoText('');
-                                        setManualSummary('');
                                         setShowAddConvo(false);
                                     }}
                                 >
@@ -314,7 +310,7 @@ export function PersonDetail() {
                                 <button
                                     type="submit"
                                     className="btn btn-primary"
-                                    disabled={saving || !convoText.trim() || (!useAI && !manualSummary.trim())}
+                                    disabled={saving || !convoText.trim()}
                                     data-tour="conversation-save"
                                 >
                                     {saving ? 'Saving...' : 'Add Conversation'}

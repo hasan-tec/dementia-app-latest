@@ -58,7 +58,26 @@ export function useARSession({
       currentPosRef.current.y += (targetPosRef.current.y - currentPosRef.current.y) * 0.18;
 
       if (overlayRef.current) {
-        overlayRef.current.style.transform = `translate3d(${currentPosRef.current.x}vw, ${currentPosRef.current.y}vh, 0)`;
+        const viewportWidth = window.innerWidth;
+        const isMobile = viewportWidth <= 768;
+
+        if (isMobile) {
+          // On mobile screens, center overlay horizontally in the middle of the screen
+          const overlayWidth = overlayRef.current.offsetWidth || 0;
+          const centeredXPx = Math.max(0, Math.round((viewportWidth - overlayWidth) / 2));
+          const clampedY = Math.max(14, Math.min(60, currentPosRef.current.y));
+
+          overlayRef.current.style.transform = `translate3d(${centeredXPx}px, ${clampedY}vh, 0)`;
+        } else {
+          // Desktop: follow face X position with right edge clamping
+          const overlayWidth = overlayRef.current.offsetWidth || 0;
+          const xPx = (currentPosRef.current.x / 100) * viewportWidth;
+          const margin = 24; // right margin in px
+          const maxXPx = viewportWidth - overlayWidth - margin;
+          const clampedXPx = Math.min(xPx, Math.max(0, maxXPx));
+
+          overlayRef.current.style.transform = `translate3d(${clampedXPx}px, ${currentPosRef.current.y}vh, 0)`;
+        }
       }
 
       animFrameRef.current = requestAnimationFrame(step);
