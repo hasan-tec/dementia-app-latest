@@ -254,7 +254,7 @@ export function People() {
                                         <img src={person.photoUrl} alt={person.name} className="person-avatar-img" />
                                     ) : (
                                         <div className="person-avatar-placeholder">
-                                            {person.name ? person.name.charAt(0).toUpperCase() : <User size={36} />}
+                                            {person.name ? person.name.charAt(0).toUpperCase() : <User size={48} />}
                                         </div>
                                     )}
                                     {person.faceDescriptor && (

@@ -173,7 +173,13 @@ export function PersonDetail() {
 
             {/* Person Header */}
             <header className="person-header glass-card">
-                <img src={person.photoUrl} alt={person.name} className="person-avatar" />
+                {person.photoUrl ? (
+                    <img src={person.photoUrl} alt={person.name} className="person-header-avatar" />
+                ) : (
+                    <div className="person-header-avatar-placeholder">
+                        {person.name ? person.name.charAt(0).toUpperCase() : 'P'}
+                    </div>
+                )}
                 <div className="person-header-info">
                     <h1 className="person-header-name">{person.name}</h1>
                     <span className="person-header-relation">{person.relation}</span>

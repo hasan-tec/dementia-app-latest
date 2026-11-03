@@ -118,7 +118,9 @@ export function Dashboard() {
 
             {/* Quick Actions */}
             <section className="dashboard-section">
-                <h2 className="section-title">Quick Actions</h2>
+                <div className="section-header">
+                    <h2 className="section-title">Quick Actions</h2>
+                </div>
                 <div className="quick-actions">
                     <Link to="/people" className="action-card glass-card">
                         <span className="action-icon">
