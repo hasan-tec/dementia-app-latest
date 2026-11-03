@@ -77,12 +77,22 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
   const currentStep = status === 'active' ? MAIN_TOUR_STEPS[currentStepIndex] ?? null : null;
   const targetElementRef = useRef<Element | null>(null);
 
+  // Guard flag: suppress auto-advance during initialization / programmatic navigation
+  const suppressAutoAdvanceRef = useRef(false);
+
+  // Stable ref for the latest nextStep so setTimeout closures always call the current version
+  const nextStepRef = useRef<() => void>(() => {});
+
   // 1. Restore tour progress when user signs in
   useEffect(() => {
     if (!user) {
       setStatus('idle');
       return;
     }
+
+    // Suppress auto-advance while we restore state to prevent the route-based
+    // auto-advance effect from immediately skipping step 1
+    suppressAutoAdvanceRef.current = true;
 
     loadUserTourProgress(user.id).then((progress) => {
       if (progress.status === 'idle') {
@@ -93,6 +103,11 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
         const idx = MAIN_TOUR_STEPS.findIndex((s) => s.id === progress.stepId);
         if (idx >= 0) setCurrentStepIndex(idx);
       }
+
+      // Allow auto-advance after state has settled (next render cycle + buffer)
+      setTimeout(() => {
+        suppressAutoAdvanceRef.current = false;
+      }, 500);
     });
   }, [user]);
 
@@ -166,6 +181,29 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
     }
   }, [currentStepIndex, status]);
 
+  // 3b. Elevate the target element above the overlay so the user can
+  //     interact with it (click buttons, type in inputs, etc.)
+  useEffect(() => {
+    const el = targetElementRef.current;
+    if (!el || status !== 'active') return;
+
+    const htmlEl = el as HTMLElement;
+    const prevPosition = htmlEl.style.position;
+    const prevZIndex = htmlEl.style.zIndex;
+
+    // Only set position: relative if the element is statically positioned
+    const computedPosition = window.getComputedStyle(htmlEl).position;
+    if (computedPosition === 'static') {
+      htmlEl.style.position = 'relative';
+    }
+    htmlEl.style.zIndex = '9998'; // above spotlight (9997), below callout (10000)
+
+    return () => {
+      htmlEl.style.position = prevPosition;
+      htmlEl.style.zIndex = prevZIndex;
+    };
+  }, [currentStepIndex, status, targetRect]);
+
   // 4. Progress handlers
   const saveState = useCallback(
     (newStatus: TourStatus, stepIdx: number) => {
@@ -183,8 +221,12 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
   );
 
   const startTour = useCallback(() => {
+    suppressAutoAdvanceRef.current = true;
     saveState('active', 0);
     navigate('/');
+    setTimeout(() => {
+      suppressAutoAdvanceRef.current = false;
+    }, 500);
   }, [navigate, saveState]);
 
   const pauseTour = useCallback(() => {
@@ -203,6 +245,10 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
     async (stepIdx: number) => {
       const targetStep = MAIN_TOUR_STEPS[stepIdx];
       if (!targetStep) return;
+
+      // Suppress auto-advance during programmatic navigation to prevent
+      // the route-based effect from double-advancing
+      suppressAutoAdvanceRef.current = true;
 
       // Handle precise routing requirements
       if (targetStep.id === 'step-nav-people') {
@@ -242,6 +288,11 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
       }
 
       saveState('active', stepIdx);
+
+      // Re-enable auto-advance after navigation + render settles
+      setTimeout(() => {
+        suppressAutoAdvanceRef.current = false;
+      }, 400);
     },
     [location.pathname, navigate, saveState]
   );
@@ -253,6 +304,9 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
       saveState('completed', currentStepIndex);
     }
   }, [currentStepIndex, goToStep, saveState]);
+
+  // Keep ref in sync so setTimeout closures always call the latest version
+  nextStepRef.current = nextStep;
 
   const prevStep = useCallback(() => {
     if (currentStepIndex > 0) {
@@ -322,22 +376,37 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
   }, [currentStep, goToStep, nextStep, status]);
 
   // 7. Auto-advance when user performs navigation directly
+  //    Uses suppressAutoAdvanceRef to prevent firing during initialization
+  //    or programmatic navigation (goToStep already handles advancing)
   useEffect(() => {
     if (status !== 'active') return;
+    if (suppressAutoAdvanceRef.current) return;
+
+    let shouldAdvance = false;
 
     if (currentStep?.id === 'step-nav-people' && location.pathname === '/people') {
-      setTimeout(nextStep, 150);
+      shouldAdvance = true;
     } else if (currentStep?.id === 'step-nav-ar' && location.pathname === '/ar') {
-      setTimeout(nextStep, 150);
+      shouldAdvance = true;
     } else if (
       currentStep?.id === 'step-person-view' &&
       (location.pathname.startsWith('/people/') || location.pathname.startsWith('/person/'))
     ) {
-      setTimeout(nextStep, 150);
+      shouldAdvance = true;
     } else if (currentStep?.id === 'step-ar-home' && location.pathname === '/') {
-      setTimeout(nextStep, 150);
+      shouldAdvance = true;
     }
-  }, [currentStep, location.pathname, nextStep, status]);
+
+    if (shouldAdvance) {
+      const timer = setTimeout(() => {
+        // Double-check suppression hasn't been set since the timeout was scheduled
+        if (!suppressAutoAdvanceRef.current) {
+          nextStepRef.current();
+        }
+      }, 250);
+      return () => clearTimeout(timer);
+    }
+  }, [currentStep, location.pathname, status]);
 
   return (
     <TourContext.Provider

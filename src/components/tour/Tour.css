@@ -19,10 +19,13 @@
   pointer-events: none;
 }
 
-/* SVG backdrop catches clicks outside the spotlight hole */
+/* SVG backdrop catches clicks outside the spotlight hole.
+   The evenodd cutout creates a transparent hole that lets
+   pointer events pass through to the target element below. */
 .tour-spotlight-path {
   fill: rgba(15, 23, 42, 0.48);
   pointer-events: auto;
+  cursor: default;
   transition: d 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -35,7 +38,8 @@
   pointer-events: auto;
 }
 
-/* Glowing Neon-Blue Focus Ring */
+/* Glowing Neon-Blue Focus Ring — pointer-events: none so the
+   ring itself never blocks clicks on the underlying target */
 .tour-spotlight-ring {
   position: absolute;
   box-sizing: border-box;
