@@ -4,7 +4,7 @@
  */
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import type { User, Session, AuthError } from '@supabase/supabase-js';
+import { AuthError, type User, type Session } from '@supabase/supabase-js';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { clearLocalCache } from '../db/database';
 
@@ -84,9 +84,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       },
     });
 
-    // Supabase returns user with empty identities or null session when email confirmation is required
-    const needsEmailConfirmation = !error && !data.session;
-    return { error, needsEmailConfirmation };
+    if (error) {
+      return { error, needsEmailConfirmation: false };
+    }
+
+    // Supabase anti-enumeration protection:
+    // When an account with this email already exists, Supabase returns a dummy user object
+    // with an empty identities array ([]) and null session instead of an error.
+    const isExistingUser =
+      Boolean(data?.user &&
+      Array.isArray(data.user.identities) &&
+      data.user.identities.length === 0);
+
+    if (isExistingUser) {
+      return {
+        error: new AuthError(
+          'An account with this email already exists.',
+          400,
+          'user_already_exists'
+        ),
+        needsEmailConfirmation: false,
+      };
+    }
+
+    // For a newly registered account, Supabase returns null session if email confirmation is required
+    const needsEmailConfirmation = !data?.session;
+    return { error: null, needsEmailConfirmation };
   }, []);
 
   const signOut = useCallback(async () => {
