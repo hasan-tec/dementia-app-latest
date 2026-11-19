@@ -43,7 +43,15 @@ export function Signup() {
       const { error, needsEmailConfirmation } = await signUp(email.trim(), password);
 
       if (error) {
-        setErrorMessage(error.message);
+        if (
+          error.message.toLowerCase().includes('already registered') ||
+          error.message.toLowerCase().includes('already exist') ||
+          (error as any).code === 'user_already_exists'
+        ) {
+          setErrorMessage('An account with this email already exists.');
+        } else {
+          setErrorMessage(error.message);
+        }
         return;
       }
 
@@ -103,7 +111,23 @@ export function Signup() {
         {errorMessage && (
           <div className="auth-error-banner" role="alert">
             <span><AlertCircle size={16} /></span>
-            <span>{errorMessage}</span>
+            <span>
+              {errorMessage}{' '}
+              {(errorMessage.toLowerCase().includes('already exist') ||
+                errorMessage.toLowerCase().includes('already registered')) && (
+                <Link
+                  to="/login"
+                  style={{
+                    color: 'inherit',
+                    fontWeight: 600,
+                    textDecoration: 'underline',
+                    marginLeft: '4px',
+                  }}
+                >
+                  Sign in here
+                </Link>
+              )}
+            </span>
           </div>
         )}
 
