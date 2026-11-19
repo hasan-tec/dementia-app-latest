@@ -1,22 +1,30 @@
 /**
  * AR Recognition Loop Controller
- * Manages recognition scheduling, stability thresholds, and timeouts without page-wide rerenders.
+ * Schedules multi-face recognition, stability tracking, and timeouts without full page rerenders.
  */
 
-import { detectFaceWithDescriptor, findBestMatch, type StoredCandidate } from '../../services/faceDetection';
-import { calculateRenderedOverlayPosition, type RenderedPosition } from './overlay-position';
+import {
+  detectAllFacesWithDescriptors,
+  matchFacesToCandidates,
+  type StoredCandidate,
+  type FaceCandidateMatch,
+} from '../../services/faceDetection';
 
 export interface ActiveMatch {
   person: StoredCandidate;
   similarity: number;
+  box: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
 }
 
 export interface RecognitionLoopCallbacks {
-  onMatch: (match: ActiveMatch) => void;
-  onUnknownFace: () => void;
-  onNoFace: () => void;
+  onMatchesUpdate: (matches: ActiveMatch[]) => void;
   onStatusChange: (status: string) => void;
-  onPositionUpdate: (pos: RenderedPosition) => void;
+  onNoFaces: () => void;
 }
 
 export class RecognitionLoop {
@@ -27,13 +35,12 @@ export class RecognitionLoop {
   private callbacks: RecognitionLoopCallbacks;
 
   private noFaceTimer: number | null = null;
-  private consecutiveMatches = 0;
-  private pendingCandidateId: string | number | null = null;
-  private activeCandidateId: string | number | null = null;
   private loopTimeoutId: number | null = null;
 
-  private readonly REQUIRED_CONSECUTIVE_OBSERVATIONS = 2; // Require 2 consecutive frames for stability
-  private readonly NO_FACE_TIMEOUT_MS = 1000; // Clear badge 1s after face disappears
+  // Track stability per candidate ID: require at least 2 observations before committing
+  private candidateObservationCounts = new Map<string | number, number>();
+  private readonly REQUIRED_CONSECUTIVE_OBSERVATIONS = 2;
+  private readonly NO_FACE_TIMEOUT_MS = 1000; // Clear matches 1s after all faces disappear
 
   constructor(callbacks: RecognitionLoopCallbacks) {
     this.callbacks = callbacks;
@@ -61,9 +68,7 @@ export class RecognitionLoop {
       clearTimeout(this.noFaceTimer);
       this.noFaceTimer = null;
     }
-    this.consecutiveMatches = 0;
-    this.pendingCandidateId = null;
-    this.activeCandidateId = null;
+    this.candidateObservationCounts.clear();
   }
 
   private scheduleNextIteration(delayMs: number): void {
@@ -74,7 +79,6 @@ export class RecognitionLoop {
   private async runIteration(): Promise<void> {
     if (!this.isRunning || !this.videoElement) return;
 
-    // Pause if document is hidden or video not playing
     if (document.hidden || this.videoElement.paused || this.videoElement.ended) {
       this.scheduleNextIteration(300);
       return;
@@ -88,66 +92,79 @@ export class RecognitionLoop {
     this.isInferenceBusy = true;
 
     try {
-      const result = await detectFaceWithDescriptor(this.videoElement);
+      const detectedFaces = await detectAllFacesWithDescriptors(this.videoElement);
 
-      if (result) {
-        // Clear no-face timeout since a face is visible
+      if (detectedFaces.length > 0) {
         if (this.noFaceTimer) {
           clearTimeout(this.noFaceTimer);
           this.noFaceTimer = null;
         }
 
-        // Calculate smooth position
-        const renderedPos = calculateRenderedOverlayPosition(
-          result.position,
-          this.videoElement,
-          true // Assume mirrored front camera
-        );
-        this.callbacks.onPositionUpdate(renderedPos);
+        if (this.candidates.length > 0) {
+          const rawMatches: FaceCandidateMatch[] = matchFacesToCandidates(
+            detectedFaces,
+            this.candidates
+          );
 
-        // Perform face recognition if candidates exist
-        if (result.descriptor && this.candidates.length > 0) {
-          const matchResult = findBestMatch(result.descriptor, this.candidates);
+          // Update observation counts for stability
+          const currentObservedIds = new Set<string | number>();
+          const stableMatches: ActiveMatch[] = [];
 
-          if (matchResult) {
-            const candidate = matchResult.candidate;
+          for (const m of rawMatches) {
+            const id = m.candidate.id;
+            currentObservedIds.add(id);
+            const count = (this.candidateObservationCounts.get(id) || 0) + 1;
+            this.candidateObservationCounts.set(id, count);
 
-            if (candidate.id === this.pendingCandidateId) {
-              this.consecutiveMatches++;
-            } else {
-              this.pendingCandidateId = candidate.id;
-              this.consecutiveMatches = 1;
+            if (count >= this.REQUIRED_CONSECUTIVE_OBSERVATIONS) {
+              stableMatches.push({
+                person: m.candidate,
+                similarity: m.similarity,
+                box: m.box,
+              });
             }
-
-            // Commit match once observation count is reached
-            if (this.consecutiveMatches >= this.REQUIRED_CONSECUTIVE_OBSERVATIONS) {
-              if (this.activeCandidateId !== candidate.id) {
-                this.activeCandidateId = candidate.id;
-                this.callbacks.onMatch({
-                  person: candidate,
-                  similarity: matchResult.similarity,
-                });
-                this.callbacks.onStatusChange(`Recognized (${Math.round(matchResult.similarity * 100)}%)`);
-              }
-            }
-          } else {
-            // Unrecognized face detected
-            this.pendingCandidateId = null;
-            this.consecutiveMatches = 0;
-            this.callbacks.onUnknownFace();
-            this.callbacks.onStatusChange('Unknown face');
           }
-        } else if (this.candidates.length === 0) {
+
+          // Decrement or clear counts for candidates not observed in this frame
+          for (const id of Array.from(this.candidateObservationCounts.keys())) {
+            if (!currentObservedIds.has(id)) {
+              this.candidateObservationCounts.delete(id);
+            }
+          }
+
+          if (stableMatches.length > 0) {
+            this.callbacks.onMatchesUpdate(stableMatches);
+
+            if (stableMatches.length === 1) {
+              const m = stableMatches[0];
+              this.callbacks.onStatusChange(
+                `Recognized ${m.person.name} (${Math.round(m.similarity * 100)}%)`
+              );
+            } else {
+              const names = stableMatches.map((m) => m.person.name).join(', ');
+              this.callbacks.onStatusChange(`Recognized (${stableMatches.length} people: ${names})`);
+            }
+          } else if (rawMatches.length > 0) {
+            // In process of stabilizing
+            this.callbacks.onStatusChange('Verifying face...');
+          } else {
+            // Faces detected, but none match registered candidates
+            this.callbacks.onMatchesUpdate([]);
+            this.callbacks.onStatusChange(
+              detectedFaces.length === 1 ? 'Unknown face' : `${detectedFaces.length} unknown faces`
+            );
+          }
+        } else {
+          this.callbacks.onMatchesUpdate([]);
           this.callbacks.onStatusChange('No faces registered');
         }
       } else {
-        // No face in current frame: start cooldown timer before clearing card
+        // No faces detected in this frame
+        this.candidateObservationCounts.clear();
+
         if (!this.noFaceTimer) {
           this.noFaceTimer = window.setTimeout(() => {
-            this.activeCandidateId = null;
-            this.pendingCandidateId = null;
-            this.consecutiveMatches = 0;
-            this.callbacks.onNoFace();
+            this.callbacks.onNoFaces();
             this.callbacks.onStatusChange('Scanning...');
           }, this.NO_FACE_TIMEOUT_MS);
         }
@@ -156,8 +173,7 @@ export class RecognitionLoop {
       console.error('AR recognition iteration error:', err);
     } finally {
       this.isInferenceBusy = false;
-      // Schedule next inference pass (approx ~5-8 Hz to balance CPU & responsiveness)
-      this.scheduleNextIteration(160);
+      this.scheduleNextIteration(130);
     }
   }
 }

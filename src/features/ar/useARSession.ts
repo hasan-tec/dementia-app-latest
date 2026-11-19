@@ -1,14 +1,17 @@
 /**
  * AR Session Lifecycle Hook
  * Coordinates concurrent startup (camera + models + gallery data),
- * manages cancellable resources, stops media tracks safely (even on late resolution),
- * and handles React StrictMode mount/unmount cleanly.
+ * manages multi-face tracking and smooth 60fps RAF position interpolation
+ * without full-page rerenders.
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { loadFaceDetectionModels, type StoredCandidate } from '../../services/faceDetection';
 import { RecognitionLoop, type ActiveMatch } from './recognition-loop';
-import type { RenderedPosition } from './overlay-position';
+import {
+  calculateFaceScreenPosition,
+  calculateOverlayTargetPosition,
+} from './overlay-position';
 
 export type ARSessionState =
   | 'idle'
@@ -23,16 +26,23 @@ export type ARSessionState =
 export interface UseARSessionOptions {
   loadGallery: () => Promise<StoredCandidate[]>;
   videoRef: React.RefObject<HTMLVideoElement | null>;
-  overlayRef: React.RefObject<HTMLDivElement | null>;
+  overlayRef?: React.RefObject<HTMLDivElement | null>; // Kept for backwards compatibility
+}
+
+interface FacePositionState {
+  targetX: number;
+  targetY: number;
+  currentX: number;
+  currentY: number;
+  lastSeen: number;
 }
 
 export function useARSession({
   loadGallery,
   videoRef,
-  overlayRef,
 }: UseARSessionOptions) {
   const [sessionState, setSessionState] = useState<ARSessionState>('idle');
-  const [activeMatch, setActiveMatch] = useState<ActiveMatch | null>(null);
+  const [activeMatches, setActiveMatches] = useState<ActiveMatch[]>([]);
   const [statusMessage, setStatusMessage] = useState('Initializing...');
   const [isTracking, setIsTracking] = useState(false);
 
@@ -42,49 +52,59 @@ export function useARSession({
   const streamRef = useRef<MediaStream | null>(null);
   const recognitionLoopRef = useRef<RecognitionLoop | null>(null);
 
-  // Smooth position animation ref
-  const targetPosRef = useRef<RenderedPosition>({ x: 50, y: 30 });
-  const currentPosRef = useRef<RenderedPosition>({ x: 50, y: 30 });
+  // Multi-face positions and overlay DOM elements
+  const facePositionsRef = useRef<Map<string, FacePositionState>>(new Map());
+  const overlayElementsRef = useRef<Map<string, HTMLDivElement>>(new Map());
+  const activeIdsRef = useRef<string>('');
   const animFrameRef = useRef<number | null>(null);
 
   /**
-   * Smoothly interpolates overlay position without triggering component rerender
+   * Registers a DOM ref for a specific person's floating overlay
+   */
+  const registerOverlayRef = useCallback((personId: string, el: HTMLDivElement | null) => {
+    if (el) {
+      overlayElementsRef.current.set(personId, el);
+      const pos = facePositionsRef.current.get(personId);
+      if (pos) {
+        el.style.transform = `translate3d(${Math.round(pos.currentX)}px, ${Math.round(pos.currentY)}px, 0)`;
+        el.style.opacity = '1';
+      }
+    } else {
+      overlayElementsRef.current.delete(personId);
+    }
+  }, []);
+
+  /**
+   * Smoothly interpolates overlay positions at 60 FPS using requestAnimationFrame
    */
   const startPositionAnimation = useCallback(() => {
     if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
 
     const step = () => {
-      currentPosRef.current.x += (targetPosRef.current.x - currentPosRef.current.x) * 0.18;
-      currentPosRef.current.y += (targetPosRef.current.y - currentPosRef.current.y) * 0.18;
+      const now = Date.now();
 
-      if (overlayRef.current) {
-        const viewportWidth = window.innerWidth;
-        const isMobile = viewportWidth <= 768;
-
-        if (isMobile) {
-          // On mobile screens, center overlay horizontally in the middle of the screen
-          const overlayWidth = overlayRef.current.offsetWidth || 0;
-          const centeredXPx = Math.max(0, Math.round((viewportWidth - overlayWidth) / 2));
-          const clampedY = Math.max(14, Math.min(60, currentPosRef.current.y));
-
-          overlayRef.current.style.transform = `translate3d(${centeredXPx}px, ${clampedY}vh, 0)`;
-        } else {
-          // Desktop: follow face X position with right edge clamping
-          const overlayWidth = overlayRef.current.offsetWidth || 0;
-          const xPx = (currentPosRef.current.x / 100) * viewportWidth;
-          const margin = 24; // right margin in px
-          const maxXPx = viewportWidth - overlayWidth - margin;
-          const clampedXPx = Math.min(xPx, Math.max(0, maxXPx));
-
-          overlayRef.current.style.transform = `translate3d(${clampedXPx}px, ${currentPosRef.current.y}vh, 0)`;
+      facePositionsRef.current.forEach((posState, personId) => {
+        // Expire position if not observed in the last 1000ms
+        if (now - posState.lastSeen > 1000) {
+          return;
         }
-      }
+
+        // Smooth exponential interpolation (0.22 factor provides fluid, responsive movement)
+        posState.currentX += (posState.targetX - posState.currentX) * 0.22;
+        posState.currentY += (posState.targetY - posState.currentY) * 0.22;
+
+        const el = overlayElementsRef.current.get(personId);
+        if (el) {
+          el.style.transform = `translate3d(${Math.round(posState.currentX)}px, ${Math.round(posState.currentY)}px, 0)`;
+          el.style.opacity = '1';
+        }
+      });
 
       animFrameRef.current = requestAnimationFrame(step);
     };
 
     animFrameRef.current = requestAnimationFrame(step);
-  }, [overlayRef]);
+  }, []);
 
   /**
    * Stop camera tracks and release resources
@@ -102,7 +122,7 @@ export function useARSession({
     }
 
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
 
@@ -110,7 +130,11 @@ export function useARSession({
       videoRef.current.srcObject = null;
     }
 
-    setActiveMatch(null);
+    facePositionsRef.current.clear();
+    overlayElementsRef.current.clear();
+    activeIdsRef.current = '';
+
+    setActiveMatches([]);
     setIsTracking(false);
     setSessionState('stopped');
     setStatusMessage('Camera stopped');
@@ -143,20 +167,21 @@ export function useARSession({
     const modelsPromise = loadFaceDetectionModels();
     const galleryPromise = loadGallery();
 
-    // 2. Await camera preview first for fastest perceived visual feedback
+    // 2. Await camera preview first for fastest visual feedback
     const cameraResult = await cameraPromise;
 
-    // Check if session was stopped/invalidated while camera was loading
     if (!isMountedRef.current || generationRef.current !== generation) {
       if (cameraResult.success && cameraResult.stream) {
-        cameraResult.stream.getTracks().forEach(t => t.stop());
+        cameraResult.stream.getTracks().forEach((t) => t.stop());
       }
       return;
     }
 
     if (!cameraResult.success) {
       const err = cameraResult.error;
-      const isDenied = err instanceof Error && (err.name === 'NotAllowedError' || err.name === 'NotFoundError');
+      const isDenied =
+        err instanceof Error &&
+        (err.name === 'NotAllowedError' || err.name === 'NotFoundError');
       setSessionState(isDenied ? 'camera_denied' : 'error');
       setStatusMessage(isDenied ? 'Camera access denied' : 'Camera initialization failed');
       return;
@@ -172,7 +197,7 @@ export function useARSession({
         await videoRef.current.play();
       } catch (playErr) {
         if (playErr instanceof Error && playErr.name === 'AbortError') {
-          return; // Interrupted by remount
+          return;
         }
       }
     }
@@ -194,21 +219,61 @@ export function useARSession({
     // 4. Initialize and start Recognition Loop
     if (!recognitionLoopRef.current) {
       recognitionLoopRef.current = new RecognitionLoop({
-        onMatch: (match) => {
-          if (generationRef.current === generation) {
-            setActiveMatch(match);
-            setIsTracking(true);
+        onMatchesUpdate: (matches) => {
+          if (generationRef.current !== generation) return;
+
+          const videoEl = videoRef.current;
+          if (videoEl) {
+            // Update target positions for each detected face
+            for (const match of matches) {
+              const personId = String(match.person.id);
+              const facePos = calculateFaceScreenPosition(match.box, videoEl);
+              const el = overlayElementsRef.current.get(personId);
+              const overlayWidth = el?.offsetWidth || 200;
+              const overlayHeight = el?.offsetHeight || 50;
+
+              // 12px minimal suitable gap directly below chin (or above if near bottom)
+              const target = calculateOverlayTargetPosition(
+                facePos,
+                overlayWidth,
+                overlayHeight,
+                12
+              );
+
+              const existing = facePositionsRef.current.get(personId);
+              if (existing) {
+                existing.targetX = target.x;
+                existing.targetY = target.y;
+                existing.lastSeen = Date.now();
+              } else {
+                facePositionsRef.current.set(personId, {
+                  targetX: target.x,
+                  targetY: target.y,
+                  currentX: target.x, // Start directly at the face to avoid flying in
+                  currentY: target.y,
+                  lastSeen: Date.now(),
+                });
+              }
+            }
+          }
+
+          // Update React matches state only if the set of people changed
+          const newIds = matches
+            .map((m) => m.person.id)
+            .sort()
+            .join(',');
+
+          if (newIds !== activeIdsRef.current) {
+            activeIdsRef.current = newIds;
+            setActiveMatches(matches);
+            setIsTracking(matches.length > 0);
           }
         },
-        onUnknownFace: () => {
+        onNoFaces: () => {
           if (generationRef.current === generation) {
-            setActiveMatch(null);
-            setIsTracking(true);
-          }
-        },
-        onNoFace: () => {
-          if (generationRef.current === generation) {
-            setActiveMatch(null);
+            facePositionsRef.current.clear();
+            activeIdsRef.current = '';
+            setActiveMatches([]);
             setIsTracking(false);
           }
         },
@@ -216,9 +281,6 @@ export function useARSession({
           if (generationRef.current === generation) {
             setStatusMessage(status);
           }
-        },
-        onPositionUpdate: (pos) => {
-          targetPosRef.current = pos;
         },
       });
     }
@@ -263,9 +325,11 @@ export function useARSession({
 
   return {
     sessionState,
-    activeMatch,
+    activeMatches,
+    activeMatch: activeMatches[0] || null, // Backwards compatibility alias
     statusMessage,
     isTracking,
+    registerOverlayRef,
     startSession,
     stopSession,
   };

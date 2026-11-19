@@ -8,9 +8,15 @@ import './ARViewer.css';
 
 export function ARViewer() {
     const videoRef = useRef<HTMLVideoElement>(null);
-    const overlayRef = useRef<HTMLDivElement>(null);
     const [isRayBanMode, setIsRayBanMode] = useState(false);
-    const [isConvoExpanded, setIsConvoExpanded] = useState(false);
+    const [expandedConvos, setExpandedConvos] = useState<Record<string, boolean>>({});
+
+    const toggleConvoExpanded = (personId: string) => {
+        setExpandedConvos((prev) => ({
+            ...prev,
+            [personId]: !prev[personId],
+        }));
+    };
 
     /**
      * Loads registered gallery candidates with their latest conversation summaries
@@ -41,18 +47,18 @@ export function ARViewer() {
         }
     }, []);
 
-    // Session hook managing concurrent startup, scheduled inference, RAF animation, and track cleanup
+    // Session hook managing concurrent startup, multi-face tracking, RAF animation, and track cleanup
     const {
         sessionState,
-        activeMatch,
+        activeMatches,
         statusMessage,
         isTracking,
+        registerOverlayRef,
         startSession,
         stopSession,
     } = useARSession({
         loadGallery,
         videoRef,
-        overlayRef,
     });
 
     const isCameraActive = sessionState === 'ready' || sessionState === 'preparing';
@@ -86,53 +92,65 @@ export function ARViewer() {
                 {statusMessage}
             </div>
 
-            {/* Floating Person Info - Driven smoothly via overlayRef without component-wide rerenders */}
-            <div
-                ref={overlayRef}
-                className="person-overlay"
-                style={{
-                    position: 'absolute',
-                    left: 0,
-                    top: 0,
-                    display: activeMatch ? 'flex' : 'none',
-                    willChange: 'transform',
-                }}
-            >
-                {activeMatch && (
-                    <>
-                        {/* Name Row - Separate badges */}
+            {/* Floating Person Labels - Positioned near each detected face with minimal suitable gap */}
+            {activeMatches.map((match) => {
+                const personId = String(match.person.id);
+                const isExpanded = !!expandedConvos[personId];
+
+                return (
+                    <div
+                        key={personId}
+                        ref={(el) => registerOverlayRef(personId, el)}
+                        className="person-overlay"
+                        style={{
+                            position: 'absolute',
+                            left: 0,
+                            top: 0,
+                            willChange: 'transform',
+                            opacity: 0, // Starts invisible, revealed smoothly by RAF when positioned
+                        }}
+                    >
+                        {/* Name Row - Distinct name badge + relation badge */}
                         <div className="name-row">
                             <div className="name-badge">
-                                <span className="person-name">{activeMatch.person.name}</span>
+                                <span className="person-name">{match.person.name}</span>
                             </div>
                             <div className="relation-badge">
-                                <span className="person-relation">{activeMatch.person.relation}</span>
+                                <span className="person-relation">{match.person.relation}</span>
                             </div>
                         </div>
 
-                        {/* Conversation Summary - Compact card, expands on click */}
-                        <div
-                            className={`convo-bubble ${isConvoExpanded ? 'expanded' : ''}`}
-                            onClick={() => setIsConvoExpanded(prev => !prev)}
-                        >
-                            <div className="convo-bubble-header">
-                                <MessageSquare size={15} className="convo-bubble-icon" />
-                                <span className="convo-bubble-label">
-                                    {isConvoExpanded ? 'Recent conversation' : 'View conversation'}
-                                </span>
-                                <ChevronDown size={14} className={`convo-bubble-chevron ${isConvoExpanded ? 'open' : ''}`} />
-                            </div>
-                            {isConvoExpanded && (
-                                <div className="convo-bubble-content">
-                                    <p className="convo-bubble-text">
-                                        {activeMatch.person.latestRawText || activeMatch.person.latestSummary}
-                                    </p>
+                        {/* Conversation Summary - Compact card anchored with person, expands on click */}
+                        {match.person.latestSummary && (
+                            <div
+                                className={`convo-bubble ${isExpanded ? 'expanded' : ''}`}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleConvoExpanded(personId);
+                                }}
+                            >
+                                <div className="convo-bubble-header">
+                                    <MessageSquare size={14} className="convo-bubble-icon" />
+                                    <span className="convo-bubble-label">
+                                        {isExpanded ? 'Recent conversation' : 'View conversation'}
+                                    </span>
+                                    <ChevronDown
+                                        size={13}
+                                        className={`convo-bubble-chevron ${isExpanded ? 'open' : ''}`}
+                                    />
                                 </div>
-                            )}
-                        </div>
-                    </>
-                )}
-            </div>
+                                {isExpanded && (
+                                    <div className="convo-bubble-content">
+                                        <p className="convo-bubble-text">
+                                            {match.person.latestRawText || match.person.latestSummary}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                );
+            })}
 
             {/* Bottom Toolbar */}
             <div className="bottom-toolbar">

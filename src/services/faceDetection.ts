@@ -136,6 +136,48 @@ export async function extractEnrollmentFaceDescriptor(
   }
 }
 
+export interface DetectedFaceItem {
+  box: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+  descriptor: Float32Array;
+}
+
+/**
+ * Multi-face detection with descriptors for AR video stream
+ */
+export async function detectAllFacesWithDescriptors(
+  video: HTMLVideoElement
+): Promise<DetectedFaceItem[]> {
+  if (!modelsLoaded) return [];
+
+  try {
+    const detections = await faceapi
+      .detectAllFaces(
+        video,
+        new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.4 })
+      )
+      .withFaceLandmarks(true)
+      .withFaceDescriptors();
+
+    return detections.map((d) => ({
+      box: {
+        x: d.detection.box.x,
+        y: d.detection.box.y,
+        width: d.detection.box.width,
+        height: d.detection.box.height,
+      },
+      descriptor: d.descriptor,
+    }));
+  } catch (error) {
+    console.error('AR multi-face detection error:', error);
+    return [];
+  }
+}
+
 /**
  * Fast single face detection for video stream in AR mode
  */
@@ -281,4 +323,67 @@ export function findBestMatch(
   }
 
   return null;
+}
+
+export interface FaceCandidateMatch {
+  candidate: StoredCandidate;
+  similarity: number;
+  box: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+}
+
+/**
+ * Matches detected faces to registered candidates without duplicate assignments.
+ * Prioritizes highest confidence matches first.
+ */
+export function matchFacesToCandidates(
+  detectedFaces: DetectedFaceItem[],
+  candidates: StoredCandidate[]
+): FaceCandidateMatch[] {
+  if (detectedFaces.length === 0 || candidates.length === 0) return [];
+
+  const allPairMatches: {
+    faceIndex: number;
+    candidate: StoredCandidate;
+    similarity: number;
+    box: { x: number; y: number; width: number; height: number };
+  }[] = [];
+
+  for (let i = 0; i < detectedFaces.length; i++) {
+    const face = detectedFaces[i];
+    const match = findBestMatch(face.descriptor, candidates);
+    if (match) {
+      allPairMatches.push({
+        faceIndex: i,
+        candidate: match.candidate,
+        similarity: match.similarity,
+        box: face.box,
+      });
+    }
+  }
+
+  // Sort descending by similarity to assign strongest matches first
+  allPairMatches.sort((a, b) => b.similarity - a.similarity);
+
+  const usedFaceIndices = new Set<number>();
+  const assignedCandidateIds = new Set<string | number>();
+  const matches: FaceCandidateMatch[] = [];
+
+  for (const pair of allPairMatches) {
+    if (!usedFaceIndices.has(pair.faceIndex) && !assignedCandidateIds.has(pair.candidate.id)) {
+      usedFaceIndices.add(pair.faceIndex);
+      assignedCandidateIds.add(pair.candidate.id);
+      matches.push({
+        candidate: pair.candidate,
+        similarity: pair.similarity,
+        box: pair.box,
+      });
+    }
+  }
+
+  return matches;
 }
